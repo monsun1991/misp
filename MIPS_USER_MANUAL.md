@@ -2,7 +2,7 @@
 ## Manufacturing Intelligence & Production System
 ### Eiffel LED Lighting Pvt. Ltd.
 
-**Version:** 1.1 | **Application URL:** http://localhost:5174  
+**Version:** 1.2 | **Production Server:** http://13.203.205.11 | **Local Dev URL:** http://localhost:5173  
 **Last Updated:** October 2026 | **Support:** IT Department / System Administrator
 
 ---
@@ -11,7 +11,7 @@
 
 1. [Getting Started — Login & Navigation](#1-getting-started--login--navigation)
 2. [Dashboard — Executive Overview](#2-dashboard--executive-overview)
-3. [Inventory — Stock Management](#3-inventory--stock-management)
+3. [Inventory & Finished Goods (FGS) — Stock Management](#3-inventory--stock-management)
 4. [Procurement — Purchase Orders & GRN](#4-procurement--purchase-orders--grn)
 5. [Forecast — Demand & Material Planning](#5-forecast--demand--material-planning)
 6. [Kits — Material Issue to Workers](#6-kits--material-issue-to-workers)
@@ -31,22 +31,29 @@
 
 ## 1. Getting Started — Login & Navigation
 
-### 1.1 Logging In
+### 1.1 Modern Login Experience (PIN, Phone, Email & User ID)
 
-1. Open your browser and go to: **http://localhost:5174**
-2. The **Landing Page** appears with Eiffel LED Lighting branding.
-3. Click **"Login to MIPS Platform"** or navigate directly to `/login`
-4. Enter your credentials:
-   - **Email:** Your registered work email
-   - **Password:** Your assigned password
-5. Click **"Sign In to MIPS"**
+The MIPS login interface uses an intuitive, secure authentication flow styled with authentic **Eiffel LED Lighting** branding and glassmorphic card design.
 
-> ⚠️ If you see "Invalid credentials", contact your System Administrator to reset your password.
-
-**Demo Credentials:**
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@gmail.com | Password@123 |
+1. Open your browser and navigate to:
+   - **Production Server:** `http://13.203.205.11/login`
+   - **Local Environment:** `http://localhost:5173/login` (or port 5174)
+2. **Identifier Input (3 flexible options):**
+   - **Registered Mobile Number:** e.g., `9822011001` or `9876543210`
+   - **Employee ID (User ID):** e.g., `EMP-0001`, `EMP-0002`
+   - **Corporate Email:** e.g., `admin@gmail.com`
+3. **6-Digit Security PIN:**
+   - Enter your 6-digit PIN across the 6 interactive input boxes.
+   - *Auto-advance:* Typing a digit automatically focuses the next input.
+   - *Show/Hide PIN toggle:* Click the eye icon (**Show PIN**) to toggle between masked bullets and visible digits.
+   - *Paste Support:* Pasting a 6-digit PIN instantly populates all 6 boxes.
+   - *Default PIN:* **`123456`**
+   - *Backward Compatibility:* Existing system passwords (such as `Password@123` or `Admin@123`) remain fully supported.
+4. Click **"Login"** to enter the portal.
+5. **Forgot PIN / Self-Service Reset:**
+   - Click **"Forgot PIN?"** underneath the PIN inputs.
+   - Enter your registered phone number.
+   - Receive your 6-digit OTP via WhatsApp and set your new PIN immediately.
 
 ---
 
@@ -56,8 +63,9 @@ After login, the **left sidebar** contains icon-based navigation. Each icon lead
 
 | Icon | Module | Who Uses It |
 |------|--------|-------------|
-| 🏠 | Dashboard | Owner, Manager |
-| 📦 | Inventory | Store Manager |
+| 🏠 | Dashboard | Owner, Plant Head, Executive Management |
+| 📦 | Inventory | Store Manager, Materials Team |
+| 📦 | Finished Goods (FGS) | Store Manager, QC Inspector, Dispatch Officer |
 | 🚚 | Procurement | Purchase Manager |
 | 📈 | Forecast | Planner, Manager |
 | 🧰 | Kits | Store Manager, Supervisor |

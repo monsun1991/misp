@@ -33,6 +33,7 @@ Thumbs.db
 # Large raw media and scratch archives
 *.cdr
 *.pdf
+!MIPS_USER_MANUAL.pdf
 catalogue_pages/
 extracted_images/
 
