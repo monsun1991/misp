@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production builds
+dist/
+build/
+*/dist/
+*/build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+*/.env
+*/.env.*
+!*/.env.example
+
+# Logs and debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Large raw media and scratch archives
+*.cdr
+*.pdf
+catalogue_pages/
+extracted_images/
+
+# Legacy root demo assets & scripts
+/app.js
+/inde.html
+/index.html
+/styles.css
+/assets/
+/data/
+/MIPS-BRD.html
+/MIPS-BRD.txt
+/MIPS-BRD.pdf

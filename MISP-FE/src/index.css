@@ -1,0 +1,405 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Roboto", sans-serif;
+}
+
+body {
+    position: relative;
+    background: #DEDDE1;
+    font-family: var(--font-sans, "Roboto", sans-serif);
+}
+
+/* body::before {
+    content: '';
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/LoginPage.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: -2;
+} */
+
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2); 
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Glassmorphism utility classes */
+.glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Backdrop filter utility classes */
+.backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+}
+
+.backdrop-blur {
+    backdrop-filter: blur(8px);
+}
+
+.backdrop-blur-md {
+    backdrop-filter: blur(12px);
+}
+
+.backdrop-blur-lg {
+    backdrop-filter: blur(16px);
+}
+
+.backdrop-blur-xl {
+    backdrop-filter: blur(24px);
+}
+
+.backdrop-blur-2xl {
+    backdrop-filter: blur(40px);
+}
+
+/* Specific blur classes for common use cases */
+.blur-15 {
+    backdrop-filter: blur(15px);
+}
+
+.glass-dark {
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+/* .glass-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    transition: all 0.3s ease;
+} */
+
+
+
+/* .glass-card:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5);
+} */
+
+.glass-button {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.glass-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-pulse-slow {
+    animation: pulse 2s infinite;
+}
+
+/* FullScreenLoader animations */
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin-slow {
+    animation: spin-slow 2s linear infinite;
+}
+
+@keyframes bounce-dots {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
+.animate-bounce-dots {
+    animation: bounce-dots 1.4s infinite ease-in-out;
+}
+
+/* Enhanced glassmorphism for loader */
+.loader-glass {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 
+        0 8px 32px 0 rgba(31, 38, 135, 0.37),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+/* Date Range Picker Clean Styles - Hide preset options */
+.date-range-picker-clean .rdrDefinedRangesWrapper {
+    display: none !important;
+}
+
+.date-range-picker-clean .rdrInputRangesWrapper {
+    display: none !important;
+}
+
+.date-range-picker-clean .rdrDateDisplayWrapper {
+    display: none !important;
+}
+
+/* Optional: Make the picker itself responsive and clean */
+.date-range-picker-clean .rdrCalendarWrapper {
+    max-width: 100%;
+    width: auto;
+    min-width: 0;
+}
+
+/* Hide overflow on small screens if needed */
+.date-range-picker-clean {
+    overflow-x: auto;
+}
+
+/* Phone Number Input Styles */
+.phone-input-wrapper {
+    width: 100%;
+}
+
+.phone-input-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border: 1px solid var(--input-border, rgba(0, 0, 0, 0.1));
+    border-radius: 0.375rem;
+    background: white;
+    transition: all 0.2s;
+}
+
+.phone-input-container:focus-within {
+    border-color: #f97316;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+}
+
+.phone-input-container .PhoneInputCountry {
+    margin-right: 0.5rem;
+    padding-left: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+.phone-input-container .PhoneInputCountrySelect {
+    border: none;
+    background: transparent;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    outline: none;
+    color: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.phone-input-container .PhoneInputCountrySelect:focus {
+    outline: none;
+}
+
+.phone-input-container .PhoneInputCountrySelect option {
+    background: white;
+    color: #111827;
+    padding: 0.5rem;
+}
+
+.phone-input-container .PhoneInputCountryIcon {
+    width: 1.5rem;
+    height: 1.5rem;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+    border-radius: 0.125rem;
+    margin-right: 0.5rem;
+}
+
+.phone-input-container .PhoneInputInput {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    background: transparent;
+    height: 2.5rem;
+    color: inherit;
+}
+
+.phone-input-container .PhoneInputInput::placeholder {
+    color: #9ca3af;
+}
+
+.phone-input-container .PhoneInputInput:focus {
+    outline: none;
+}
+
+.phone-input-field {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.phone-input-field:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Dark mode support - Using class-based approach */
+.dark .phone-input-container,
+.phone-input-container.dark-mode-container {
+    background: var(--primaryCardLight, #1f2937);
+    border-color: var(--primaryBorder, #374151);
+    color: var(--foreground, #f9fafb);
+}
+
+.dark .phone-input-container:focus-within,
+.phone-input-container.dark-mode-container:focus-within {
+    border-color: #f97316;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.3);
+}
+
+.dark .phone-input-container .PhoneInputInput,
+.phone-input-container.dark-mode-container .PhoneInputInput {
+    background: transparent;
+    color: var(--foreground, #f9fafb);
+}
+
+.dark .phone-input-container .PhoneInputInput::placeholder,
+.phone-input-container.dark-mode-container .PhoneInputInput::placeholder {
+    color: var(--muted-foreground, #9ca3af);
+}
+
+.dark .phone-input-container .PhoneInputCountrySelect,
+.phone-input-container.dark-mode-container .PhoneInputCountrySelect {
+    background: transparent;
+    color: var(--foreground, #f9fafb);
+}
+
+.dark .phone-input-container .PhoneInputCountrySelect option,
+.phone-input-container.dark-mode-container .PhoneInputCountrySelect option {
+    background: var(--primaryCard, #1f2937);
+    color: var(--foreground, #f9fafb);
+    padding: 0.5rem;
+}
+
+.dark .phone-input-container .PhoneInputCountrySelect option:hover,
+.phone-input-container.dark-mode-container .PhoneInputCountrySelect option:hover {
+    background: var(--primaryCardStrong, #111827);
+}
+
+.dark .phone-input-container .PhoneInputCountryIcon,
+.phone-input-container.dark-mode-container .PhoneInputCountryIcon {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Additional styling for country selector dropdown */
+.phone-country-select.dark-mode-select {
+    color: var(--foreground, #f9fafb) !important;
+    background: transparent !important;
+}
+
+.phone-country-select.dark-mode-select option {
+    background: var(--primaryCard, #1f2937) !important;
+    color: var(--foreground, #f9fafb) !important;
+}
+
+.phone-country-select.dark-mode-select:hover {
+    background: var(--primaryHover, rgba(55, 65, 81, 0.5)) !important;
+}
+
+.phone-country-select.dark-mode-select:focus {
+    background: var(--primaryHover, rgba(55, 65, 81, 0.5)) !important;
+    outline: none;
+}
+
+/* Light mode - ensure proper styling */
+.phone-input-container:not(.dark-mode-container) .PhoneInputCountrySelect {
+    color: #111827;
+    background: transparent;
+}
+
+.phone-input-container:not(.dark-mode-container) .PhoneInputCountrySelect:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.phone-input-container:not(.dark-mode-container) .PhoneInputCountrySelect:focus {
+    background: rgba(0, 0, 0, 0.05);
+    outline: none;
+}
+
+.phone-input-container:not(.dark-mode-container) .PhoneInputCountrySelect option {
+    background: white;
+    color: #111827;
+}
+
+/* Country selector arrow styling */
+.phone-input-container .PhoneInputCountrySelectArrow {
+    opacity: 0.5;
+    margin-left: 0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+.dark .phone-input-container .PhoneInputCountrySelectArrow,
+.phone-input-container.dark-mode-container .PhoneInputCountrySelectArrow {
+    opacity: 0.7;
+    filter: brightness(1.5);
+}
+
+/* Ensure proper contrast for country icon in dark mode */
+.dark .phone-input-container .PhoneInputCountryIcon,
+.phone-input-container.dark-mode-container .PhoneInputCountryIcon {
+    filter: brightness(1.1);
+}

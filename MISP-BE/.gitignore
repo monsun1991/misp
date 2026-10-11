@@ -1,0 +1,13 @@
+node_modules
+
+.env
+
+dist
+
+uploads
+
+logs
+
+package-lock.json
+
+build
