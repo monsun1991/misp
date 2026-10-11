@@ -4,7 +4,7 @@ import { useIPStore } from "@/store/ipStore";
 
 // Base axios instance
 export const api = axios.create({
-    baseURL: import.meta.env.VITE_BASE_URL || "/v1",
+    baseURL: import.meta.env.VITE_BASE_URL || "",
     timeout: 10000,
 });
 

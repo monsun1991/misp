@@ -21,7 +21,7 @@ async function runSeed() {
   console.log('🧹 Clearing old mock & placeholder records...');
   // Temporarily disable foreign key checks for clean truncation
   await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0;');
-  await queryRunner.query('TRUNCATE TABLE stock_ledger;');
+  await queryRunner.query('TRUNCATE TABLE stock_ledgers;');
   await queryRunner.query('TRUNCATE TABLE production_logs;');
   await queryRunner.query('TRUNCATE TABLE kits;');
   await queryRunner.query('TRUNCATE TABLE purchase_orders;');
