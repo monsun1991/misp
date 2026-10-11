@@ -1,10 +1,16 @@
 import { API_ENDPOINTS } from '../endpoints';
 import api from '@/api/axiosInstance';
 
-export const loginAPI = async (data: { email: string; password: string }): Promise<any> => {
+export const loginAPI = async (data: { email?: string; identifier?: string; password?: string; pin?: string }): Promise<any> => {
+    const payload = {
+        identifier: data.identifier || data.email,
+        email: data.email || data.identifier,
+        pin: data.pin || data.password,
+        password: data.password || data.pin,
+    };
     const response = await api.post(
         API_ENDPOINTS.user.login,
-        { email: data.email, password: data.password }
+        payload
     );
     return response.data;
 };

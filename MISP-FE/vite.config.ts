@@ -13,6 +13,12 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    strictPort: false
+    strictPort: false,
+    proxy: {
+      '/v1': {
+        target: process.env.VITE_BACKEND_URL || 'http://13.203.205.11',
+        changeOrigin: true,
+      },
+    },
   }
 });

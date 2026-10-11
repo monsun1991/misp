@@ -1,6 +1,11 @@
 export interface ILogin {
-  email: string;
-  password: string;
+  email?: string;
+  identifier?: string;
+  username?: string;
+  phoneNumber?: string;
+  empCode?: string;
+  password?: string;
+  pin?: string;
 }
 
 export interface IAuthResponse {

@@ -7,7 +7,7 @@ export const useAuth = () => {
     const store = useUserStore();
     const queryClient = useQueryClient();
 
-    const loginMutation = useMutation<any, Error, { email: string; password: string }>({
+    const loginMutation = useMutation<any, Error, { email?: string; identifier?: string; password?: string; pin?: string }>({
         mutationFn: loginAPI,
         onSuccess: (data) => {
             if (data.success) {

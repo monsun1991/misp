@@ -1,5 +1,5 @@
 import { useAuth } from '@/api/queries/auth';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { FiEye, FiEyeOff } from 'react-icons/fi';
@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/dialog";
 
 const LoginPage = () => {
-    const [showPassword, setShowPassword] = useState(false);
     const [userId, setUserId] = useState('');
-    const [password, setPassword] = useState('');
+    const [pin, setPin] = useState<string[]>(['', '', '', '', '', '']);
+    const [showPin, setShowPin] = useState(false);
+    const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
+
     const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
     const [resetPhoneNumber, setResetPhoneNumber] = useState('');
     const [resetOtp, setResetOtp] = useState('');
@@ -32,16 +34,18 @@ const LoginPage = () => {
 
     const { login, isLoading, setIsExternal, sendResetOtp, resetPasswordWithOtp } = useAuth();
 
-    // Check for username and password in URL parameters
+    // Check for username and password / PIN in URL parameters
     useEffect(() => {
         useUserStore.getState().logout();
         const username = searchParams.get('username');
-        const urlPassword = searchParams.get('password');
+        const urlPassword = searchParams.get('password') || searchParams.get('pin');
         if (username && urlPassword) {
             const data = {
+                identifier: username,
                 email: username,
+                pin: urlPassword,
                 password: urlPassword,
-            }
+            };
             login.mutate(data, {
                 onSuccess: () => {
                     setIsExternal(true);
@@ -52,16 +56,71 @@ const LoginPage = () => {
         }
     }, [searchParams]);
 
+    const handlePinChange = (val: string, index: number) => {
+        const digit = val.replace(/[^0-9]/g, '').slice(-1);
+        const newPin = [...pin];
+        newPin[index] = digit;
+        setPin(newPin);
+
+        if (digit && index < 5) {
+            pinRefs.current[index + 1]?.focus();
+        }
+    };
+
+    const handlePinKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+        if (e.key === 'Backspace') {
+            if (!pin[index] && index > 0) {
+                const newPin = [...pin];
+                newPin[index - 1] = '';
+                setPin(newPin);
+                pinRefs.current[index - 1]?.focus();
+            } else {
+                const newPin = [...pin];
+                newPin[index] = '';
+                setPin(newPin);
+            }
+        } else if (e.key === 'ArrowLeft' && index > 0) {
+            pinRefs.current[index - 1]?.focus();
+        } else if (e.key === 'ArrowRight' && index < 5) {
+            pinRefs.current[index + 1]?.focus();
+        } else if (e.key === 'Enter') {
+            handleLogin();
+        }
+    };
+
+    const handlePinPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+        e.preventDefault();
+        const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+        if (!pastedData) return;
+
+        const newPin = [...pin];
+        for (let i = 0; i < 6; i++) {
+            newPin[i] = pastedData[i] || '';
+        }
+        setPin(newPin);
+
+        const focusIdx = Math.min(pastedData.length, 5);
+        pinRefs.current[focusIdx]?.focus();
+    };
+
     const handleLogin = async () => {
-        if (!userId || !password) {
-            toast.error("Please enter both User ID and Password")
+        const pinString = pin.join('');
+        if (!userId.trim()) {
+            toast.error("Please enter your Email, Phone Number, or User ID");
             return;
         }
+        if (pinString.length < 4) {
+            toast.error("Please enter your complete 6-Digit PIN");
+            return;
+        }
+
         setIsExternal(false);
         const data = {
-            email: userId,
-            password: password,
-        }
+            identifier: userId.trim(),
+            email: userId.trim(),
+            pin: pinString,
+            password: pinString,
+        };
 
         login.mutate(data, {
             onSuccess: () => {
@@ -86,7 +145,7 @@ const LoginPage = () => {
 
     const handleResetPassword = () => {
         if (!resetOtp || !newPassword) {
-            toast.error("Please enter both OTP and new password");
+            toast.error("Please enter both OTP and new PIN/Password");
             return;
         }
         resetPasswordWithOtp.mutate({ 
@@ -95,7 +154,7 @@ const LoginPage = () => {
             newPassword 
         }, {
             onSuccess: () => {
-                toast.success("Password reset successfully. You can now login.");
+                toast.success("PIN reset successfully. You can now login.");
                 setIsForgotPasswordOpen(false);
                 setOtpSent(false);
                 setResetPhoneNumber('');
@@ -105,142 +164,147 @@ const LoginPage = () => {
         });
     };
 
-
     const tokenFromUrl = searchParams.get('token');
     const usernameFromUrl = searchParams.get('username');
-    const passwordFromUrl = searchParams.get('password');
+    const passwordFromUrl = searchParams.get('password') || searchParams.get('pin');
 
     if (tokenFromUrl || (usernameFromUrl && passwordFromUrl)) {
-        return (
-            <>
-                <FullScreenLoader />
-            </>
-        );
+        return <FullScreenLoader />;
     }
 
     return (
-        <>
-            <div
-                className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat relative"
-                style={{
-                    backgroundImage: 'url(/LoginPage.webp)',
-                }}
+        <div 
+            className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat relative p-4"
+            style={{
+                backgroundImage: 'url(/LoginPage.webp)',
+            }}
+        >
+            {/* Luminous, clear and light emerald-gradient backdrop overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/40 via-black/30 to-black/50 backdrop-blur-[2px]"></div>
+
+            {/* Back to website button */}
+            <Link
+                to="/"
+                className="absolute top-6 left-6 z-20 flex items-center gap-2 px-4 py-2 rounded-xl bg-black/60 hover:bg-black/80 text-white/90 hover:text-white border border-white/20 backdrop-blur-md text-xs font-semibold transition-all shadow-lg"
             >
-                {/* Back to website button */}
-                <Link
-                    to="/"
-                    className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/70 hover:bg-black/90 text-white/90 hover:text-white border border-white/20 backdrop-blur-md text-xs font-semibold transition-all shadow-lg"
+                &larr; Back to Eiffel Lighting
+            </Link>
+
+            {/* Main Centered Frosted Glass Login Card */}
+            <div className="relative z-10 w-full max-w-md mx-4">
+                <div
+                    className="backdrop-blur-xl bg-white/20 p-8 sm:p-9 rounded-3xl shadow-2xl border border-white/30"
+                    style={{
+                        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+                    }}
                 >
-                    &larr; Back to Eiffel Lighting
-                </Link>
-
-                <div className="absolute inset-0 bg-black/55 backdrop-blur-[1px]"></div>
-
-                <div className="relative z-10 w-full max-w-md mx-4">
-                    <div
-                        className="backdrop-blur-2xl bg-black/65 p-8 rounded-3xl shadow-2xl border border-white/15"
-                        style={{
-                            boxShadow: '0 12px 40px 0 rgba(0, 0, 0, 0.7)',
-                        }}
-                    >
-                        <div className="flex flex-col items-center mb-6">
-                            <div className="backdrop-blur-md bg-black/70 p-2.5 rounded-2xl border border-white/20 mb-3 shadow-xl">
-                                <img
-                                    src="/assets/eiffel-logo.jpg"
-                                    alt="MIPS"
-                                    className="w-14 h-14 object-contain rounded-xl"
-                                />
-                            </div>
-                            <h1 className="font-extrabold tracking-widest text-2xl text-white drop-shadow-lg">M I P S</h1>
-                            <p className="text-[11px] text-lime-400 font-bold text-center mt-1 drop-shadow tracking-wider uppercase">
-                                Manufacturing Inventory &amp; Planning System
-                            </p>
-                        </div>
-
-                        <hr className="border-white/15 mb-6" />
-
-                        <h2 className="text-white text-xl font-bold mb-1 drop-shadow">Welcome Back</h2>
-                        <p className="text-xs mb-6 text-gray-300 drop-shadow">Enter your enterprise credentials to access MIPS portal</p>
-
-                        <div className="mb-5">
-                            <label className="block text-xs font-semibold text-gray-200 mb-1.5 drop-shadow">Email Address</label>
-                            <input
-                                type="text"
-                                value={userId}
-                                onChange={(e) => setUserId(e.target.value)}
-                                placeholder="name@company.com"
-                                className="w-full px-4 py-3 bg-white/95 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-500 transition-all text-gray-900 placeholder:text-gray-500 font-medium text-sm"
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        handleLogin();
-                                    }
-                                }}
+                    {/* Header: Eiffel LED Lighting Logo & MIPS System */}
+                    <div className="flex flex-col items-center mb-6">
+                        <div className="p-2.5 rounded-2xl bg-white/95 border border-white/50 shadow-xl mb-3 flex items-center justify-center">
+                            <img
+                                src="/assets/eiffel-logo.jpg"
+                                alt="Eiffel Lighting"
+                                className="h-12 w-auto object-contain rounded-lg"
                             />
                         </div>
+                        <h1 className="font-extrabold tracking-widest text-2xl text-white drop-shadow-md">
+                            M I P S
+                        </h1>
+                        <p className="text-[11px] text-emerald-300 font-bold tracking-wider uppercase mt-0.5 text-center drop-shadow-sm">
+                            Manufacturing Inventory &amp; Planning System
+                        </p>
+                        <p className="text-[10px] text-white/80 font-medium tracking-wide">
+                            Eiffel LED Lighting Pvt. Ltd.
+                        </p>
+                        <div className="w-full h-px bg-white/20 mt-4" />
+                    </div>
 
-                        <div className="mb-6">
-                            <label className="block text-xs font-semibold text-gray-200 mb-1.5 drop-shadow">Password</label>
-                            <div className="relative">
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter your password"
-                                    className="w-full px-4 py-3 bg-white/95 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-500 transition-all text-gray-900 placeholder:text-gray-500 font-medium text-sm"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleLogin();
-                                        }
-                                    }}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-900 focus:outline-none transition-colors"
-                                >
-                                    {showPassword ? <FiEye size={20} /> : <FiEyeOff size={20} />}
-                                </button>
-                            </div>
-                            <div className="mt-2 text-right">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsForgotPasswordOpen(true)}
-                                    className="text-xs text-lime-400 hover:text-lime-300 hover:underline transition-all font-semibold"
-                                >
-                                    Forgot Password?
-                                </button>
-                            </div>
-                        </div>
+                    {/* Welcome Subtitle */}
+                    <div className="mb-5">
+                        <h2 className="text-emerald-300 text-2xl font-bold mb-1 drop-shadow-sm">Welcome Back</h2>
+                        <p className="text-xs text-white/80 drop-shadow-sm">Sign in to your manufacturing account</p>
+                    </div>
 
-                        <Button
-                            onClick={handleLogin}
-                            disabled={isLoading}
-                            className="w-full bg-lime-500 hover:bg-lime-400 text-black py-3.5 rounded-xl font-black text-sm shadow-lg shadow-lime-500/20 hover:shadow-lime-500/30 transition-all border-none"
-                        >
-                            {isLoading && (
-                                <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4 text-black" />
-                            )}
-                            {isLoading ? 'Authenticating…' : 'Sign in to MIPS'}
-                        </Button>
+                    {/* Email / Phone / User ID input */}
+                    <div className="mb-4">
+                        <label className="block text-xs font-medium text-white/90 mb-1.5 drop-shadow-sm">
+                            Email / Phone / User ID
+                        </label>
+                        <input
+                            type="text"
+                            value={userId}
+                            onChange={(e) => setUserId(e.target.value)}
+                            placeholder="e.g. admin@gmail.com or 9876543210"
+                            className="w-full px-4 py-3 bg-white/85 hover:bg-white/95 focus:bg-white border border-white/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-gray-900 placeholder:text-gray-500 font-medium text-sm shadow-sm"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    pinRefs.current[0]?.focus();
+                                }
+                            }}
+                        />
+                    </div>
 
-                        <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
-                            <span className="text-gray-300 text-[11px]">Demo: <strong className="text-lime-400 font-mono">admin@gmail.com</strong></span>
+                    {/* 6-Digit PIN Section */}
+                    <div className="mb-6">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-medium text-white/90 drop-shadow-sm">
+                                6-Digit PIN
+                            </label>
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setUserId('admin@gmail.com');
-                                    setPassword('Admin@123');
-                                }}
-                                className="text-[11px] text-lime-400 hover:text-lime-300 underline font-semibold transition-all"
+                                onClick={() => setShowPin(!showPin)}
+                                className="flex items-center gap-1 text-[11px] text-white/80 hover:text-white transition-colors cursor-pointer"
                             >
-                                Auto-Fill Credentials
+                                {showPin ? <FiEyeOff size={13} /> : <FiEye size={13} />}
+                                <span>{showPin ? "Hide PIN" : "Show PIN"}</span>
+                            </button>
+                        </div>
+
+                        {/* 6 Individual PIN Input Boxes */}
+                        <div className="grid grid-cols-6 gap-2 sm:gap-2.5">
+                            {pin.map((digit, idx) => (
+                                <input
+                                    key={idx}
+                                    ref={(el) => (pinRefs.current[idx] = el)}
+                                    type={showPin ? "text" : "password"}
+                                    inputMode="numeric"
+                                    maxLength={1}
+                                    value={digit}
+                                    onChange={(e) => handlePinChange(e.target.value, idx)}
+                                    onKeyDown={(e) => handlePinKeyDown(e, idx)}
+                                    onPaste={handlePinPaste}
+                                    className="w-full h-12 sm:h-13 bg-white/85 hover:bg-white/95 focus:bg-white border border-white/50 rounded-xl text-center font-bold text-xl sm:text-2xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm"
+                                />
+                            ))}
+                        </div>
+
+                        {/* Forgot PIN Link */}
+                        <div className="mt-2 text-right">
+                            <button
+                                type="button"
+                                onClick={() => setIsForgotPasswordOpen(true)}
+                                className="text-[11px] text-white/80 hover:text-emerald-300 hover:underline transition-all font-medium cursor-pointer"
+                            >
+                                Forgot PIN?
                             </button>
                         </div>
                     </div>
+
+                    {/* Login Button */}
+                    <Button
+                        onClick={handleLogin}
+                        disabled={isLoading}
+                        className="w-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-emerald-600/25 transition-all border border-emerald-500/20 cursor-pointer"
+                    >
+                        {isLoading && (
+                            <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" />
+                        )}
+                        {isLoading ? 'Authenticating…' : 'Login'}
+                    </Button>
                 </div>
             </div>
 
-            {/* Forgot Password Dialog */}
+            {/* Forgot PIN / Password Dialog */}
             <Dialog open={isForgotPasswordOpen} onOpenChange={(open) => {
                 setIsForgotPasswordOpen(open);
                 if (!open) {
@@ -250,26 +314,26 @@ const LoginPage = () => {
                     setNewPassword('');
                 }
             }}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md bg-slate-900/95 border border-white/20 text-white rounded-2xl backdrop-blur-xl">
                     <DialogHeader>
-                        <DialogTitle>Reset Password</DialogTitle>
-                        <DialogDescription>
+                        <DialogTitle className="text-white text-lg">Reset PIN / Password</DialogTitle>
+                        <DialogDescription className="text-gray-300 text-xs">
                             {otpSent 
-                                ? "Enter the OTP sent to your WhatsApp and your new password." 
-                                : "Enter your phone number to receive a reset OTP via WhatsApp."}
+                                ? "Enter the OTP sent to your WhatsApp and set a new 6-digit PIN." 
+                                : "Enter your registered phone number to receive a reset OTP via WhatsApp."}
                         </DialogDescription>
                     </DialogHeader>
                     
                     {!otpSent ? (
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Phone Number</label>
+                                <label className="text-xs font-medium text-gray-200">Registered Phone Number</label>
                                 <input
                                     type="text"
                                     value={resetPhoneNumber}
                                     onChange={(e) => setResetPhoneNumber(e.target.value)}
-                                    placeholder="Enter your phone number"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                    placeholder="e.g. 9876543210"
+                                    className="w-full px-4 py-2.5 bg-white/95 text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') handleSendOtp();
                                     }}
@@ -278,68 +342,60 @@ const LoginPage = () => {
                             <Button 
                                 onClick={handleSendOtp}
                                 disabled={sendResetOtp.isPending || !resetPhoneNumber}
-                                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl py-2.5 font-semibold text-sm cursor-pointer"
                             >
                                 {sendResetOtp.isPending ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
-                                Send OTP
+                                Send WhatsApp OTP
                             </Button>
                         </div>
                     ) : (
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">OTP</label>
+                                <label className="text-xs font-medium text-gray-200">WhatsApp OTP</label>
                                 <input
                                     type="text"
                                     value={resetOtp}
                                     onChange={(e) => setResetOtp(e.target.value)}
                                     placeholder="Enter 6-digit OTP"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                    className="w-full px-4 py-2.5 bg-white/95 text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">New Password</label>
-                                <div className="relative">
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        placeholder="Enter new password"
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleResetPassword();
-                                        }}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                    >
-                                        {showPassword ? <FiEye size={18} /> : <FiEyeOff size={18} />}
-                                    </button>
-                                </div>
+                                <label className="text-xs font-medium text-gray-200">New 6-Digit PIN</label>
+                                <input
+                                    type="password"
+                                    maxLength={6}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder="e.g. 123456"
+                                    className="w-full px-4 py-2.5 bg-white/95 text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium font-mono"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleResetPassword();
+                                    }}
+                                />
                             </div>
                             <Button 
                                 onClick={handleResetPassword}
                                 disabled={resetPasswordWithOtp.isPending || !resetOtp || !newPassword}
-                                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl py-2.5 font-semibold text-sm cursor-pointer"
                             >
                                 {resetPasswordWithOtp.isPending ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
-                                Reset Password
+                                Update PIN
                             </Button>
                             <div className="text-center">
                                 <button 
                                     type="button" 
                                     onClick={() => setOtpSent(false)}
-                                    className="text-sm text-orange-600 hover:underline"
+                                    className="text-xs text-gray-400 hover:text-white underline cursor-pointer"
                                 >
-                                    Back to phone number
+                                    Change phone number
                                 </button>
                             </div>
                         </div>
                     )}
                 </DialogContent>
             </Dialog>
-        </>
+        </div>
     );
 };
 
