@@ -29,14 +29,22 @@ export const loginUser = async (
   }
 
   const cleanPhone = rawId.replace(/[^0-9]/g, "");
+  const phoneVariants: string[] = [rawId];
+  if (cleanPhone.length >= 10) {
+    const p10 = cleanPhone.slice(-10);
+    phoneVariants.push(p10);
+    phoneVariants.push(`+91 ${p10.slice(0, 5)} ${p10.slice(5)}`);
+    phoneVariants.push(`+91${p10}`);
+    phoneVariants.push(`+91 ${p10}`);
+    phoneVariants.push(`${p10.slice(0, 5)} ${p10.slice(5)}`);
+  }
 
   // Flexible lookup by email, empCode, or phone number
   let user = await userRepository.findOne({
     where: [
       { email: rawId.toLowerCase() },
       { empCode: rawId.toUpperCase() },
-      ...(cleanPhone.length >= 7 ? [{ phoneNumber: cleanPhone }] : []),
-      ...(cleanPhone.length >= 10 ? [{ phoneNumber: cleanPhone.slice(-10) }] : [])
+      ...phoneVariants.map(p => ({ phoneNumber: p }))
     ]
   });
 
