@@ -55,6 +55,21 @@ The MIPS login interface uses an intuitive, secure authentication flow styled wi
    - Enter your registered phone number.
    - Receive your 6-digit OTP via WhatsApp and set your new PIN immediately.
 
+**Configured Enterprise Accounts (Default PIN: `123456`):**
+
+| Employee Name | Role | Email | Employee ID | Registered Mobile | 6-Digit PIN |
+|---|---|---|---|---|---|
+| System Super Admin | SuperAdmin | admin@gmail.com | EMP-0001 | 9822011001 | 123456 |
+| Anand Deshmukh | Plant Manager | anand.deshmukh@eiffel.in | EMP-1001 | 9822011002 | 123456 |
+| Ramesh Sharma | Store Manager | ramesh.sharma@eiffel.in | EMP-1003 | 9822011004 | 123456 |
+| Sneha Kulkarni | Purchase Manager | sneha.kulkarni@eiffel.in | EMP-1004 | 9822011005 | 123456 |
+| Suresh Patil | Floor Supervisor | suresh.patil@eiffel.in | EMP-1005 | 9822011006 | 123456 |
+| Dr. Vikram Malhotra | Quality Inspector | vikram.malhotra@eiffel.in | EMP-1002 | 9822011003 | 123456 |
+| Ravi Kumar | Worker / Assembly | ravi.kumar@eiffel.in | EMP-2001 | 9822011007 | 123456 |
+| Naveen Reddy | Plant Manager | naveen.reddy@eiffel.in | EMP-3001 | 9822011010 | 123456 |
+| Priya Nair | Store Manager | priya.nair@eiffel.in | EMP-3002 | 9822011011 | 123456 |
+| K. Srinivas | Floor Supervisor | k.srinivas@eiffel.in | EMP-3003 | 9822011012 | 123456 |
+
 ---
 
 ### 1.2 Understanding the Navigation Sidebar
