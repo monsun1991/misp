@@ -1581,7 +1581,7 @@ export const EmployeesPage: React.FC = () => {
                 type="submit"
                 size="sm"
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]"
               >
                 {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>

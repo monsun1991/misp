@@ -113,7 +113,9 @@ export const InventoryPage: React.FC = () => {
   const [editingMatId, setEditingMatId] = useState('');
   const [editMatCode, setEditMatCode] = useState('');
   const [editMatName, setEditMatName] = useState('');
-  const [editMatCategory, setEditMatCategory] = useState<Material['category']>('Electronics');
+  const [editMatCategory, setEditMatCategory] = useState<string>('Electronics');
+  const [isEditCustomCategory, setIsEditCustomCategory] = useState<boolean>(false);
+  const [editCustomCategoryInput, setEditCustomCategoryInput] = useState<string>('');
   const [editMatUom, setEditMatUom] = useState('Pcs');
   const [editMatSupplier, setEditMatSupplier] = useState('');
   const [editMatWarehouse, setEditMatWarehouse] = useState('');
@@ -130,6 +132,8 @@ export const InventoryPage: React.FC = () => {
     setEditMatCode(mat.code);
     setEditMatName(mat.name);
     setEditMatCategory(mat.category);
+    setIsEditCustomCategory(false);
+    setEditCustomCategoryInput('');
     setEditMatUom(mat.uom);
     setEditMatSupplier(mat.supplier);
     setEditMatWarehouse(mat.warehouse);
@@ -147,9 +151,13 @@ export const InventoryPage: React.FC = () => {
     e.preventDefault();
     if (!editingMatId) return;
 
+    const finalCategory = isEditCustomCategory && editCustomCategoryInput.trim()
+      ? editCustomCategoryInput.trim()
+      : editMatCategory;
+
     updateMaterial(editingMatId, {
       name: editMatName,
-      category: editMatCategory,
+      category: finalCategory,
       uom: editMatUom,
       supplier: editMatSupplier,
       warehouse: editMatWarehouse,
@@ -163,12 +171,25 @@ export const InventoryPage: React.FC = () => {
     });
 
     setShowEditMatModal(false);
+    setIsEditCustomCategory(false);
+    setEditCustomCategoryInput('');
   };
 
   // Extract unique warehouses dynamically for the active plant
   const dynamicWarehouses = Array.from(new Set(materials.map((m) => m.warehouse))).filter(Boolean);
   // Extract all distinct categories from materials
-  const dynamicCategories = Array.from(new Set(materials.map((m) => m.category))).filter(Boolean);
+  const dynamicCategories = Array.from(
+    new Set([
+      'Electronics',
+      'Mechanical',
+      'Optical',
+      'Hardware',
+      'Packaging',
+      'Raw Materials',
+      'Chemicals & Consumables',
+      ...materials.map((m) => m.category)
+    ])
+  ).filter(Boolean);
   // Extract all distinct suppliers from rawMaterials
   const allSuppliers = Array.from(new Set(rawMaterials.map((m) => m.supplier).filter(Boolean)));
 
@@ -1542,18 +1563,51 @@ export const InventoryPage: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold mb-1">Category</label>
-                    <select
-                      value={editMatCategory}
-                      onChange={(e) => setEditMatCategory(e.target.value as any)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                    >
-                      <option value="Electronics">Electronics</option>
-                      <option value="Mechanical">Mechanical</option>
-                      <option value="Optical">Optical</option>
-                      <option value="Hardware">Hardware</option>
-                      <option value="Packaging">Packaging</option>
-                    </select>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-semibold">Category *</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditCustomCategory(!isEditCustomCategory);
+                          if (!isEditCustomCategory) setEditCustomCategoryInput('');
+                        }}
+                        className="text-[10px] text-[#146b68] dark:text-[#84cc16] hover:underline font-semibold"
+                      >
+                        {isEditCustomCategory ? '← Choose Existing' : '+ Add Custom'}
+                      </button>
+                    </div>
+                    {isEditCustomCategory ? (
+                      <Input
+                        placeholder="Type custom category..."
+                        value={editCustomCategoryInput}
+                        onChange={(e) => setEditCustomCategoryInput(e.target.value)}
+                        required
+                        autoFocus
+                        className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
+                      />
+                    ) : (
+                      <select
+                        value={editMatCategory}
+                        onChange={(e) => {
+                          if (e.target.value === '__custom__') {
+                            setIsEditCustomCategory(true);
+                            setEditCustomCategoryInput('');
+                          } else {
+                            setEditMatCategory(e.target.value);
+                          }
+                        }}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                      >
+                        {dynamicCategories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                        <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
+                          + Add Custom Category...
+                        </option>
+                      </select>
+                    )}
                   </div>
                   <div>
                     <label className="block font-semibold mb-1">Unit of Measure (UOM)</label>
@@ -1672,7 +1726,7 @@ export const InventoryPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowEditMatModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]">
                   Save Specifications
                 </Button>
               </div>

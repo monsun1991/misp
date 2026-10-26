@@ -789,7 +789,7 @@ export const ProductionPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowEditLogModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]">
                   Save Changes
                 </Button>
               </div>

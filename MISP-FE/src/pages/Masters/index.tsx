@@ -81,10 +81,25 @@ export const MastersPage: React.FC = () => {
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
   const [showAddWarehouseModal, setShowAddWarehouseModal] = useState(false);
 
+  // Dynamic Material & Product Categories
+  const dynamicMaterialCategories = React.useMemo(() => {
+    const defaultCats = ['Electronics', 'Mechanical', 'Optical', 'Hardware', 'Packaging', 'Raw Materials', 'Chemicals & Consumables'];
+    const fromMaterials = materials.map((m) => m.category).filter(Boolean);
+    return Array.from(new Set([...defaultCats, ...fromMaterials]));
+  }, [materials]);
+
+  const dynamicProductCategories = React.useMemo(() => {
+    const defaultCats = ['LED Bulbs', 'Downlights', 'Battens', 'Floodlights', 'Architectural & Gate', 'Street Lights', 'Strip Lights'];
+    const fromProducts = products.map((p) => p.category).filter(Boolean);
+    return Array.from(new Set([...defaultCats, ...fromProducts]));
+  }, [products]);
+
   // New Material form state
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
-  const [newCategory, setNewCategory] = useState<'Electronics' | 'Mechanical' | 'Optical' | 'Hardware' | 'Packaging'>('Electronics');
+  const [newCategory, setNewCategory] = useState<string>('Electronics');
+  const [isCustomCategory, setIsCustomCategory] = useState<boolean>(false);
+  const [customCategoryInput, setCustomCategoryInput] = useState<string>('');
   const [newUom, setNewUom] = useState('Pcs');
   const [newSupplier, setNewSupplier] = useState(suppliers[0]?.name || '');
   const [newWarehouse, setNewWarehouse] = useState(warehouses[0]?.name || '');
@@ -96,7 +111,9 @@ export const MastersPage: React.FC = () => {
   // New Product form state
   const [newProdCode, setNewProdCode] = useState('');
   const [newProdName, setNewProdName] = useState('');
-  const [newProdCategory, setNewProdCategory] = useState<'LED Bulbs' | 'Downlights' | 'Battens' | 'Floodlights' | 'Architectural & Gate'>('LED Bulbs');
+  const [newProdCategory, setNewProdCategory] = useState<string>('LED Bulbs');
+  const [isCustomProdCategory, setIsCustomProdCategory] = useState<boolean>(false);
+  const [customProdCategoryInput, setCustomProdCategoryInput] = useState<string>('');
   const [newProdWattage, setNewProdWattage] = useState('12W');
   const [newProdCost, setNewProdCost] = useState<number>(150);
 
@@ -225,10 +242,14 @@ export const MastersPage: React.FC = () => {
     e.preventDefault();
     if (!newCode || !newName) return;
 
+    const finalCategory = isCustomCategory && customCategoryInput.trim()
+      ? customCategoryInput.trim()
+      : newCategory;
+
     addMaterial({
       code: newCode,
       name: newName,
-      category: newCategory,
+      category: finalCategory,
       uom: newUom,
       supplier: newSupplier || 'Standard Vendor',
       warehouse: newWarehouse,
@@ -247,17 +268,23 @@ export const MastersPage: React.FC = () => {
     setShowAddMatModal(false);
     setNewCode('');
     setNewName('');
+    setIsCustomCategory(false);
+    setCustomCategoryInput('');
   };
 
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProdCode || !newProdName) return;
 
+    const finalCategory = isCustomProdCategory && customProdCategoryInput.trim()
+      ? customProdCategoryInput.trim()
+      : newProdCategory;
+
     const newProd: Product = {
       id: `prod-${Date.now()}`,
       code: newProdCode,
       name: newProdName,
-      category: newProdCategory,
+      category: finalCategory,
       wattage: newProdWattage,
       unit: 'Unit',
       standardCost: newProdCost,
@@ -269,6 +296,8 @@ export const MastersPage: React.FC = () => {
     setSelectedProduct(newProd);
     setEditingBOM([]);
     setShowAddProdModal(false);
+    setIsCustomProdCategory(false);
+    setCustomProdCategoryInput('');
     setActiveTab('bom');
   };
 
@@ -352,7 +381,9 @@ export const MastersPage: React.FC = () => {
   const [showEditMatModal, setShowEditMatModal] = useState(false);
   const [editingMatId, setEditingMatId] = useState('');
   const [editMatName, setEditMatName] = useState('');
-  const [editMatCategory, setEditMatCategory] = useState<Material['category']>('Electronics');
+  const [editMatCategory, setEditMatCategory] = useState<string>('Electronics');
+  const [isEditCustomCategory, setIsEditCustomCategory] = useState<boolean>(false);
+  const [editCustomCategoryInput, setEditCustomCategoryInput] = useState<string>('');
   const [editMatUom, setEditMatUom] = useState('Pcs');
   const [editMatSupplier, setEditMatSupplier] = useState('');
   const [editMatWarehouse, setEditMatWarehouse] = useState('');
@@ -366,6 +397,8 @@ export const MastersPage: React.FC = () => {
     setEditingMatId(m.id);
     setEditMatName(m.name);
     setEditMatCategory(m.category);
+    setIsEditCustomCategory(false);
+    setEditCustomCategoryInput('');
     setEditMatUom(m.uom);
     setEditMatSupplier(m.supplier);
     setEditMatWarehouse(m.warehouse || warehouses[0]?.name || '');
@@ -379,9 +412,13 @@ export const MastersPage: React.FC = () => {
 
   const handleSaveEditMat = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalCategory = isEditCustomCategory && editCustomCategoryInput.trim()
+      ? editCustomCategoryInput.trim()
+      : editMatCategory;
+
     updateMaterial(editingMatId, {
       name: editMatName,
-      category: editMatCategory,
+      category: finalCategory,
       uom: editMatUom,
       supplier: editMatSupplier,
       warehouse: editMatWarehouse,
@@ -392,6 +429,8 @@ export const MastersPage: React.FC = () => {
       status: editMatStatus,
     });
     setShowEditMatModal(false);
+    setIsEditCustomCategory(false);
+    setEditCustomCategoryInput('');
   };
 
   // Edit Product state
@@ -399,7 +438,9 @@ export const MastersPage: React.FC = () => {
   const [editingProdId, setEditingProdId] = useState('');
   const [editProdCode, setEditProdCode] = useState('');
   const [editProdName, setEditProdName] = useState('');
-  const [editProdCategory, setEditProdCategory] = useState<Product['category']>('LED Bulbs');
+  const [editProdCategory, setEditProdCategory] = useState<string>('LED Bulbs');
+  const [isEditCustomProdCategory, setIsEditCustomProdCategory] = useState<boolean>(false);
+  const [editCustomProdCategoryInput, setEditCustomProdCategoryInput] = useState<string>('');
   const [editProdWattage, setEditProdWattage] = useState('12W');
   const [editProdCost, setEditProdCost] = useState<number>(150);
   const [editProdStatus, setEditProdStatus] = useState<Product['status']>('Active');
@@ -409,6 +450,8 @@ export const MastersPage: React.FC = () => {
     setEditProdCode(p.code);
     setEditProdName(p.name);
     setEditProdCategory(p.category);
+    setIsEditCustomProdCategory(false);
+    setEditCustomProdCategoryInput('');
     setEditProdWattage(p.wattage || '12W');
     setEditProdCost(p.standardCost);
     setEditProdStatus(p.status);
@@ -417,10 +460,14 @@ export const MastersPage: React.FC = () => {
 
   const handleSaveEditProd = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalCategory = isEditCustomProdCategory && editCustomProdCategoryInput.trim()
+      ? editCustomProdCategoryInput.trim()
+      : editProdCategory;
+
     updateProduct(editingProdId, {
       code: editProdCode,
       name: editProdName,
-      category: editProdCategory,
+      category: finalCategory,
       wattage: editProdWattage,
       standardCost: editProdCost,
       status: editProdStatus,
@@ -430,7 +477,7 @@ export const MastersPage: React.FC = () => {
         ...selectedProduct,
         code: editProdCode,
         name: editProdName,
-        category: editProdCategory,
+        category: finalCategory,
         wattage: editProdWattage,
         standardCost: editProdCost,
         status: editProdStatus,
@@ -1411,18 +1458,51 @@ export const MastersPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">Category</label>
-                  <select
-                    value={newProdCategory}
-                    onChange={(e) => setNewProdCategory(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    <option value="LED Bulbs">LED Bulbs</option>
-                    <option value="Downlights">Downlights</option>
-                    <option value="Battens">Battens</option>
-                    <option value="Floodlights">Floodlights</option>
-                    <option value="Architectural & Gate">Architectural & Gate</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold">Category *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomProdCategory(!isCustomProdCategory);
+                        if (!isCustomProdCategory) setCustomProdCategoryInput('');
+                      }}
+                      className="text-[10px] text-[#146b68] dark:text-[#84cc16] hover:underline font-semibold"
+                    >
+                      {isCustomProdCategory ? '← Choose Existing' : '+ Add Custom'}
+                    </button>
+                  </div>
+                  {isCustomProdCategory ? (
+                    <Input
+                      placeholder="Type custom product category..."
+                      value={customProdCategoryInput}
+                      onChange={(e) => setCustomProdCategoryInput(e.target.value)}
+                      required
+                      autoFocus
+                      className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
+                    />
+                  ) : (
+                    <select
+                      value={newProdCategory}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setIsCustomProdCategory(true);
+                          setCustomProdCategoryInput('');
+                        } else {
+                          setNewProdCategory(e.target.value);
+                        }
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    >
+                      {dynamicProductCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                      <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
+                        + Add Custom Category...
+                      </option>
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -1583,18 +1663,51 @@ export const MastersPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">Category</label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    <option value="Electronics">Electronics</option>
-                    <option value="Mechanical">Mechanical</option>
-                    <option value="Optical">Optical</option>
-                    <option value="Hardware">Hardware</option>
-                    <option value="Packaging">Packaging</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold">Category *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomCategory(!isCustomCategory);
+                        if (!isCustomCategory) setCustomCategoryInput('');
+                      }}
+                      className="text-[10px] text-[#146b68] dark:text-[#84cc16] hover:underline font-semibold"
+                    >
+                      {isCustomCategory ? '← Choose Existing' : '+ Add Custom'}
+                    </button>
+                  </div>
+                  {isCustomCategory ? (
+                    <Input
+                      placeholder="Type custom category..."
+                      value={customCategoryInput}
+                      onChange={(e) => setCustomCategoryInput(e.target.value)}
+                      required
+                      autoFocus
+                      className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
+                    />
+                  ) : (
+                    <select
+                      value={newCategory}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setIsCustomCategory(true);
+                          setCustomCategoryInput('');
+                        } else {
+                          setNewCategory(e.target.value);
+                        }
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    >
+                      {dynamicMaterialCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                      <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
+                        + Add Custom Category...
+                      </option>
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -1855,18 +1968,51 @@ export const MastersPage: React.FC = () => {
             <form onSubmit={handleSaveEditMat} className="space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1">Category</label>
-                  <select
-                    value={editMatCategory}
-                    onChange={(e) => setEditMatCategory(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    <option value="Electronics">Electronics</option>
-                    <option value="Mechanical">Mechanical</option>
-                    <option value="Optical">Optical</option>
-                    <option value="Hardware">Hardware</option>
-                    <option value="Packaging">Packaging</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold">Category *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditCustomCategory(!isEditCustomCategory);
+                        if (!isEditCustomCategory) setEditCustomCategoryInput('');
+                      }}
+                      className="text-[10px] text-[#146b68] dark:text-[#84cc16] hover:underline font-semibold"
+                    >
+                      {isEditCustomCategory ? '← Choose Existing' : '+ Add Custom'}
+                    </button>
+                  </div>
+                  {isEditCustomCategory ? (
+                    <Input
+                      placeholder="Type custom category..."
+                      value={editCustomCategoryInput}
+                      onChange={(e) => setEditCustomCategoryInput(e.target.value)}
+                      required
+                      autoFocus
+                      className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
+                    />
+                  ) : (
+                    <select
+                      value={editMatCategory}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setIsEditCustomCategory(true);
+                          setEditCustomCategoryInput('');
+                        } else {
+                          setEditMatCategory(e.target.value);
+                        }
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    >
+                      {dynamicMaterialCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                      <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
+                        + Add Custom Category...
+                      </option>
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Status</label>
@@ -1999,7 +2145,7 @@ export const MastersPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowEditMatModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]">
                   Save Changes
                 </Button>
               </div>
@@ -2034,18 +2180,51 @@ export const MastersPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">Category</label>
-                  <select
-                    value={editProdCategory}
-                    onChange={(e) => setEditProdCategory(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    <option value="LED Bulbs">LED Bulbs</option>
-                    <option value="Downlights">Downlights</option>
-                    <option value="Battens">Battens</option>
-                    <option value="Floodlights">Floodlights</option>
-                    <option value="Architectural & Gate">Architectural & Gate</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold">Category *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditCustomProdCategory(!isEditCustomProdCategory);
+                        if (!isEditCustomProdCategory) setEditCustomProdCategoryInput('');
+                      }}
+                      className="text-[10px] text-[#146b68] dark:text-[#84cc16] hover:underline font-semibold"
+                    >
+                      {isEditCustomProdCategory ? '← Choose Existing' : '+ Add Custom'}
+                    </button>
+                  </div>
+                  {isEditCustomProdCategory ? (
+                    <Input
+                      placeholder="Type custom product category..."
+                      value={editCustomProdCategoryInput}
+                      onChange={(e) => setEditCustomProdCategoryInput(e.target.value)}
+                      required
+                      autoFocus
+                      className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
+                    />
+                  ) : (
+                    <select
+                      value={editProdCategory}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setIsEditCustomProdCategory(true);
+                          setEditCustomProdCategoryInput('');
+                        } else {
+                          setEditProdCategory(e.target.value);
+                        }
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    >
+                      {dynamicProductCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                      <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
+                        + Add Custom Category...
+                      </option>
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -2104,7 +2283,7 @@ export const MastersPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowEditProdModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]">
                   Save Changes
                 </Button>
               </div>
@@ -2201,7 +2380,7 @@ export const MastersPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowEditSupplierModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]">
                   Save Changes
                 </Button>
               </div>
@@ -2311,7 +2490,7 @@ export const MastersPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowEditWarehouseModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]">
                   Save Changes
                 </Button>
               </div>
@@ -2441,7 +2620,7 @@ export const MastersPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowEditCustModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]">
                   Save Changes
                 </Button>
               </div>

@@ -27,7 +27,7 @@ export interface Material {
   id: string;
   code: string;
   name: string;
-  category: 'Electronics' | 'Mechanical' | 'Optical' | 'Hardware' | 'Packaging';
+  category: string;
   subCategory?: string;
   uom: string; // e.g. 'Pcs', 'Meters', 'Sets', 'Kg'
   supplier: string;
@@ -57,7 +57,7 @@ export interface Product {
   id: string;
   code: string;
   name: string;
-  category: 'LED Bulbs' | 'Downlights' | 'Battens' | 'Floodlights' | 'Architectural & Gate';
+  category: string;
   wattage: string; // '5W', '9W', '12W', '15W', '20W', '50W'
   unit: string;
   standardCost: number;
@@ -197,7 +197,7 @@ export interface Customer {
   contactPerson: string;
   phone: string;
   email: string;
-  category: 'B2B Brand OEM' | 'Regional Distributor' | 'Wholesale Trader' | 'Direct Institutional';
+  category: string;
   paymentTerms: string;
 }
 

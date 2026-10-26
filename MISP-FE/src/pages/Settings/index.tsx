@@ -592,8 +592,9 @@ export const SettingsPage: React.FC = () => {
             <Button
               size="sm"
               onClick={() => setShowDeptModal(true)}
-              className="text-xs bg-blue-600 text-white"
+              className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs gap-1.5 shadow-md shadow-[#84cc16]/25 border border-[#84cc16]"
             >
+              <PlusCircle className="w-4 h-4 mr-1" />
               + Create Department
             </Button>
           </CardHeader>
@@ -1579,7 +1580,7 @@ export const SettingsPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowEditDeptModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]">
                   Save Changes
                 </Button>
               </div>
@@ -1690,7 +1691,7 @@ export const SettingsPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowEditPlantModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]">
                   Save Changes
                 </Button>
               </div>
