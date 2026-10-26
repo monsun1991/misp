@@ -94,10 +94,10 @@ export const EmployeesPage: React.FC = () => {
             email: u.email,
             phone: u.phoneNumber || '-',
             role: u.role || 'Worker',
-            plant: u.plant || 'Plant 1 - Pune Hub',
-            department: u.department || 'Final Assembly Line 1',
-            team: u.team || 'Line 1 Alpha',
-            supervisor: u.supervisor || 'System Super Admin',
+            plant: u.plant || '',
+            department: u.department || '',
+            team: u.team || '',
+            supervisor: u.supervisor || '',
             status: (u.status as any) || (u.isActive !== false ? 'Active' : 'Inactive'),
             joiningDate: u.createdAt ? u.createdAt.split('T')[0] : '2026-10-01',
             workstation: u.workstation || 'Floor',
@@ -130,7 +130,7 @@ export const EmployeesPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+91 ');
   const [selectedRole, setSelectedRole] = useState(roles[0]?.name || 'Worker');
-  const [modalPlant, setModalPlant] = useState(plants[0]?.name || 'Plant 1 - Pune Hub');
+  const [modalPlant, setModalPlant] = useState(plants[0]?.name || '');
   const [selectedDept, setSelectedDept] = useState('');
   const [team, setTeam] = useState('');
   const [supervisor, setSupervisor] = useState('');
@@ -161,11 +161,11 @@ export const EmployeesPage: React.FC = () => {
     setEditEmpEmail(emp.email);
     setEditEmpPhone(emp.phone);
     setEditEmpRole(emp.role);
-    setEditEmpPlant(emp.plant || plants[0]?.name || 'Plant 1 - Pune Hub');
+    setEditEmpPlant(emp.plant || plants[0]?.name || '');
     setEditEmpDept(emp.department);
     setEditEmpTeam(emp.team);
     setEditEmpWorkstation(emp.workstation || 'General Bench');
-    setEditEmpSupervisor(emp.supervisor || 'System Super Admin');
+    setEditEmpSupervisor(emp.supervisor || '');
     setEditEmpStatus(emp.status);
     setEditEmpSkills(Array.isArray(emp.skills) ? emp.skills.join(', ') : '');
     setEditEmpPin('');
@@ -324,7 +324,7 @@ export const EmployeesPage: React.FC = () => {
   const openOnboardModal = () => {
     const initialPlant = selectedPlant && !selectedPlant.startsWith('All')
       ? selectedPlant
-      : (plants[0]?.name || 'Plant 1 - Pune Hub');
+      : (plants[0]?.name || '');
     setModalPlant(initialPlant);
     const matching = departments.filter((d) => {
       const p = initialPlant.toLowerCase();

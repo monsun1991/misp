@@ -164,20 +164,20 @@ export const SettingsPage: React.FC = () => {
   // Department creation modal state
   const [showDeptModal, setShowDeptModal] = useState(false);
   const [deptName, setDeptName] = useState('');
-  const [deptPlant, setDeptPlant] = useState('Plant 1 - Pune Hub');
-  const [deptManager, setDeptManager] = useState('Anand Deshmukh');
+  const [deptPlant, setDeptPlant] = useState(plants[0]?.name || '');
+  const [deptManager, setDeptManager] = useState('');
   const [deptDesc, setDeptDesc] = useState('');
-  const [deptTeams, setDeptTeams] = useState('Line Alpha, Line Beta');
+  const [deptTeams, setDeptTeams] = useState('');
 
   // Plant / Location creation modal state
   const [showPlantModal, setShowPlantModal] = useState(false);
   const [plantName, setPlantName] = useState('');
-  const [plantCode, setPlantCode] = useState(`PLANT-0${(plants?.length || 2) + 1}`);
+  const [plantCode, setPlantCode] = useState(`PLANT-0${(plants?.length || 0) + 1}`);
   const [plantCity, setPlantCity] = useState('');
   const [plantType, setPlantType] = useState('Full Manufacturing & SMT');
-  const [plantManager, setPlantManager] = useState('Anand Deshmukh');
-  const [plantWarehouses, setPlantWarehouses] = useState<number>(2);
-  const [plantDepts, setPlantDepts] = useState<number>(4);
+  const [plantManager, setPlantManager] = useState('');
+  const [plantWarehouses, setPlantWarehouses] = useState<number>(1);
+  const [plantDepts, setPlantDepts] = useState<number>(1);
   const [plantDesc, setPlantDesc] = useState('');
   const [plantStatus, setPlantStatus] = useState<'Active' | 'Commissioning'>('Active');
 
@@ -312,14 +312,14 @@ export const SettingsPage: React.FC = () => {
     if (!plantName) return;
 
     addPlant({
-      code: plantCode || `PLANT-0${(plants?.length || 2) + 1}`,
+      code: plantCode || `PLANT-0${(plants?.length || 0) + 1}`,
       name: plantName,
-      city: plantCity || 'Pune, India',
+      city: plantCity,
       type: plantType,
-      manager: plantManager,
+      manager: plantManager || (employees[0]?.name || 'Unassigned'),
       warehousesCount: Number(plantWarehouses) || 1,
       departmentsCount: Number(plantDepts) || 1,
-      description: plantDesc || 'Manufacturing & assembly facility.',
+      description: plantDesc,
       status: plantStatus,
     });
 
@@ -327,7 +327,7 @@ export const SettingsPage: React.FC = () => {
     setPlantName('');
     setPlantCity('');
     setPlantDesc('');
-    setPlantCode(`PLANT-0${(plants?.length || 2) + 2}`);
+    setPlantCode(`PLANT-0${(plants?.length || 0) + 2}`);
   };
 
   const handleSaveFactoryConfig = (e: React.FormEvent) => {
@@ -423,7 +423,7 @@ export const SettingsPage: React.FC = () => {
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              Plants & Facilities ({plants?.length || 2})
+              Plants & Facilities ({plants?.length || 0})
             </button>
             <button
               onClick={() => setActiveTab('factory')}
@@ -598,54 +598,72 @@ export const SettingsPage: React.FC = () => {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {departments.map((d) => (
-                <div
-                  key={d.id}
-                  className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3 text-xs"
+            {(!departments || departments.length === 0) ? (
+              <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+                <Building className="w-10 h-10 text-slate-400 mx-auto" />
+                <h3 className="font-semibold text-slate-700 dark:text-slate-300">No Departments Configured</h3>
+                <p className="text-slate-500 max-w-md mx-auto text-xs">
+                  No manufacturing departments or operational units have been created yet. Click the button below to define your shop floor units.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => setShowDeptModal(true)}
+                  className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs"
                 >
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{d.name}</span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleOpenEditDept(d)}
-                        className="text-slate-400 hover:text-blue-600 p-1"
-                        title="Edit Department"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => deleteDepartment(d.id)}
-                        className="text-red-400 hover:text-red-600 p-1"
-                        title="Delete Department"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="text-slate-500">
-                    Plant: <strong className="text-slate-700 dark:text-slate-300">{d.plant}</strong>
-                  </div>
-                  <div className="text-slate-500">
-                    Lead / Manager: <strong className="text-blue-600">{d.manager}</strong>
-                  </div>
-                  {d.description && <p className="text-slate-400 text-[11px]">{d.description}</p>}
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-semibold block mb-1">Active Teams:</span>
-                    <div className="flex flex-wrap gap-1">
-                      {d.activeTeams.map((t, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-medium"
+                  <PlusCircle className="w-4 h-4 mr-1.5" />
+                  + Create Department
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {departments.map((d) => (
+                  <div
+                    key={d.id}
+                    className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3 text-xs"
+                  >
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{d.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpenEditDept(d)}
+                          className="text-slate-400 hover:text-blue-600 p-1"
+                          title="Edit Department"
                         >
-                          {t}
-                        </span>
-                      ))}
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteDepartment(d.id)}
+                          className="text-red-400 hover:text-red-600 p-1"
+                          title="Delete Department"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-slate-500">
+                      Plant: <strong className="text-slate-700 dark:text-slate-300">{d.plant}</strong>
+                    </div>
+                    <div className="text-slate-500">
+                      Lead / Manager: <strong className="text-blue-600">{d.manager}</strong>
+                    </div>
+                    {d.description && <p className="text-slate-400 text-[11px]">{d.description}</p>}
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-semibold block mb-1">Active Teams:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {d.activeTeams.map((t, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-medium"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -943,46 +961,61 @@ export const SettingsPage: React.FC = () => {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(plants || []).map((plant) => {
-                const isSelected = selectedPlant === plant.name;
-                const deptsInPlant = departments.filter(
-                  (d) =>
-                    d.plant.toLowerCase().includes(plant.name.toLowerCase()) ||
-                    plant.name.toLowerCase().includes(d.plant.toLowerCase())
-                ).length;
+            {(!plants || plants.length === 0) ? (
+              <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+                <Building className="w-10 h-10 text-slate-400 mx-auto" />
+                <h3 className="font-semibold text-slate-700 dark:text-slate-300">No Plants or Facilities Configured</h3>
+                <p className="text-slate-500 max-w-md mx-auto text-xs">
+                  No manufacturing facilities or regional staging hubs have been registered yet. Click the button below to add your first plant location.
+                </p>
+                <Button
+                  onClick={() => setShowPlantModal(true)}
+                  className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs"
+                >
+                  <PlusCircle className="w-4 h-4 mr-1.5" />
+                  + Add New Location / Plant
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {plants.map((plant) => {
+                  const isSelected = selectedPlant === plant.name;
+                  const deptsInPlant = departments.filter(
+                    (d) =>
+                      d.plant.toLowerCase().includes(plant.name.toLowerCase()) ||
+                      plant.name.toLowerCase().includes(d.plant.toLowerCase())
+                  ).length;
 
-                return (
-                  <div
-                    key={plant.id}
-                    onClick={() => setSelectedPlant(plant.name)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all space-y-2.5 relative group ${
-                      isSelected
-                        ? 'border-[#146b68] bg-[#183638]/5 dark:bg-[#183638]/20 shadow-sm ring-2 ring-[#84cc16]/30'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <Building className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
-                        {plant.name}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {isSelected && (
-                          <Badge className="bg-[#183638] text-[#84cc16] border border-[#84cc16]/40 text-[10px] py-0 px-2">Active Context</Badge>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEditPlant(plant);
-                          }}
-                          className="text-slate-400 hover:text-blue-600 p-1"
-                          title="Edit Location"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        {plant.id !== 'plant-01' && plant.id !== 'plant-02' && (
+                  return (
+                    <div
+                      key={plant.id}
+                      onClick={() => setSelectedPlant(plant.name)}
+                      className={`p-4 rounded-xl border cursor-pointer transition-all space-y-2.5 relative group ${
+                        isSelected
+                          ? 'border-[#146b68] bg-[#183638]/5 dark:bg-[#183638]/20 shadow-sm ring-2 ring-[#84cc16]/30'
+                          : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Building className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
+                          {plant.name}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {isSelected && (
+                            <Badge className="bg-[#183638] text-[#84cc16] border border-[#84cc16]/40 text-[10px] py-0 px-2">Active Context</Badge>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditPlant(plant);
+                            }}
+                            className="text-slate-400 hover:text-blue-600 p-1"
+                            title="Edit Location"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -994,50 +1027,50 @@ export const SettingsPage: React.FC = () => {
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 text-[10px] flex-wrap">
-                      <span className="font-mono bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300 font-bold">
-                        {plant.code}
-                      </span>
-                      <span className="text-slate-500">{plant.city}</span>
-                      <Badge variant="outline" className="text-[9px] py-0 text-slate-500">
-                        {plant.type}
-                      </Badge>
-                    </div>
-
-                    <p className="text-slate-500 text-[11px] leading-relaxed">{plant.description}</p>
-
-                    <div className="pt-2 text-[11px] text-slate-600 dark:text-slate-400 space-y-1 border-t border-slate-100 dark:border-slate-800">
-                      <div>&bull; Warehouses: <strong>{plant.warehousesCount} stores</strong></div>
-                      <div>&bull; Departments: <strong>{deptsInPlant || plant.departmentsCount} units</strong></div>
-                      <div>&bull; Plant Head: <strong>{plant.manager}</strong></div>
-                    </div>
-
-                    {!isSelected && (
-                      <div className="pt-1">
-                        <span className="text-[10px] text-blue-600 font-medium group-hover:underline">
-                          Click to switch operating context &rarr;
+                      <div className="flex items-center gap-2 text-[10px] flex-wrap">
+                        <span className="font-mono bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300 font-bold">
+                          {plant.code}
                         </span>
+                        <span className="text-slate-500">{plant.city}</span>
+                        <Badge variant="outline" className="text-[9px] py-0 text-slate-500">
+                          {plant.type}
+                        </Badge>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
 
-              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2">
-                <div className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <Key className="w-4 h-4 text-emerald-600" />
-                  Facility Scope Rules
-                </div>
-                <p className="text-slate-500 text-[11px]">
-                  Material movements and kits are strictly scoped to the active facility context.
-                </p>
-                <div className="pt-2 text-[11px] text-emerald-600 font-semibold border-t border-slate-100 dark:border-slate-800">
-                  &bull; Zero cross-plant stock contamination
-                </div>
+                      <p className="text-slate-500 text-[11px] leading-relaxed">{plant.description}</p>
+
+                      <div className="pt-2 text-[11px] text-slate-600 dark:text-slate-400 space-y-1 border-t border-slate-100 dark:border-slate-800">
+                        <div>&bull; Warehouses: <strong>{plant.warehousesCount} stores</strong></div>
+                        <div>&bull; Departments: <strong>{deptsInPlant || plant.departmentsCount} units</strong></div>
+                        <div>&bull; Plant Head: <strong>{plant.manager}</strong></div>
+                      </div>
+
+                      {!isSelected && (
+                        <div className="pt-1">
+                          <span className="text-[10px] text-blue-600 font-medium group-hover:underline">
+                            Click to switch operating context &rarr;
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2">
+              <div className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Key className="w-4 h-4 text-emerald-600" />
+                Facility Scope Rules
+              </div>
+              <p className="text-slate-500 text-[11px]">
+                Material movements and kits are strictly scoped to the active facility context.
+              </p>
+              <div className="pt-2 text-[11px] text-emerald-600 font-semibold border-t border-slate-100 dark:border-slate-800">
+                &bull; Zero cross-plant stock contamination
               </div>
             </div>
           </CardContent>

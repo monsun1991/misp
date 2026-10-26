@@ -1736,8 +1736,14 @@ export const MastersPage: React.FC = () => {
                     onChange={(e) => setNewWhPlant(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
                   >
-                    <option value="Plant 1 - Pune">Plant 1 - Pune</option>
-                    <option value="Plant 2 - Hyderabad">Plant 2 - Hyderabad</option>
+                    {(plants || []).map((p) => (
+                      <option key={p.id} value={`${p.name} - ${p.city}`}>
+                        {p.name} ({p.city})
+                      </option>
+                    ))}
+                    {(!plants || plants.length === 0) && (
+                      <option value="">No plants registered yet</option>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -2200,10 +2206,7 @@ export const MastersPage: React.FC = () => {
                       </option>
                     ))}
                     {(!plants || plants.length === 0) && (
-                      <>
-                        <option value="Plant 1 - Pune">Plant 1 - Pune Hub</option>
-                        <option value="Plant 2 - Chakan">Plant 2 - Chakan Cluster</option>
-                      </>
+                      <option value="">No plants registered yet</option>
                     )}
                   </select>
                 </div>

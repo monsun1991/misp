@@ -302,7 +302,7 @@ export const isPlantMatch = (itemPlant?: string, activePlant?: string): boolean 
     return true;
   }
   if (!itemPlant) {
-    return activePlant.includes('Plant 1') || activePlant.includes('Pune');
+    return true;
   }
   const itemP = itemPlant.toLowerCase();
   const actP = activePlant.toLowerCase();
@@ -608,14 +608,14 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
       departments: [],
       employees: [],
       plants: [],
-      selectedPlant: 'Plant 1 - Pune Hub',
+      selectedPlant: 'All Plants (Global View)',
       setSelectedPlant: (plant) => set({ selectedPlant: plant }),
       auditLogs: [],
 
       addMaterial: (newMat) => {
         const id = `mat-${Date.now()}`;
         const activePlant = get().selectedPlant;
-        const plant = newMat.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = newMat.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
         const material: Material = { ...newMat, plant, id };
         set((state) => ({
           materials: [...state.materials, material],
@@ -679,7 +679,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
 
         const newStock = Math.max(0, material.currentStock + adjustmentQty);
         const activePlant = get().selectedPlant;
-        const plant = material.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = material.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
 
         const defaultTxType: StockLedgerEntry['transactionType'] =
           adjustmentQty >= 0 ? 'Adjustment (+)' : 'Adjustment (-)';
@@ -738,7 +738,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
 
       createPurchaseOrder: (poData) => {
         const activePlant = get().selectedPlant;
-        const plant = poData.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = poData.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
         const po: PurchaseOrder = {
           ...poData,
           plant,
@@ -808,7 +808,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
         const id = `grn-${Date.now()}`;
         const activePlant = get().selectedPlant;
         const targetPO = get().purchaseOrders.find((p) => p.poNumber === grnData.poNumber);
-        const plant = grnData.plant || targetPO?.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = grnData.plant || targetPO?.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
         const grn: GRNEntry = { ...grnData, plant, id };
         
         // Update PO pending & received quantity
@@ -887,7 +887,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
 
       createCustomerPO: (poData) => {
         const activePlant = get().selectedPlant;
-        const plant = poData.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = poData.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
         const totalOrderedQty = poData.items.reduce((sum, item) => sum + item.orderedQty, 0);
         const totalAmount = poData.items.reduce((sum, item) => sum + item.orderedQty * item.unitPrice, 0);
 
@@ -964,7 +964,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
         if (!targetPO) return;
 
         const activePlant = get().selectedPlant;
-        const plant = targetPO.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = targetPO.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
         const dispatchNo = `DC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
         let totalDispatchUnits = 0;
@@ -1203,7 +1203,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
         const id = `kit-${Date.now()}`;
         const kitNumber = `KIT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
         const activePlant = get().selectedPlant;
-        const plant = kitData.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = kitData.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
         const kit: ProductionKit = {
           ...kitData,
           plant,
@@ -1382,7 +1382,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
 
         const product = get().products.find((p) => p.id === kit.productId);
         const activePlant = get().selectedPlant;
-        const plant = kit.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = kit.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
         const batchLotNumber = `LOT-FG-${kit.kitNumber}`;
 
         let newFgItem: FinishedGoodItem | null = null;
@@ -1465,7 +1465,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
       inwardToFinishedGoods: (itemData, user) => {
         const id = `fg-${Date.now()}`;
         const activePlant = get().selectedPlant;
-        const plant = itemData.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = itemData.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
         const availableQty = Math.max(0, itemData.quantityOnHand - (itemData.allocatedQty || 0));
 
         const newItem: FinishedGoodItem = {
@@ -1605,7 +1605,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
         const unitsPerHour = Number((logData.actualQty / workingHours).toFixed(2));
         const productivityPct = Number(((logData.actualQty / logData.targetQty) * 100).toFixed(1));
         const activePlant = get().selectedPlant;
-        const plant = logData.plant || (activePlant.startsWith('All') ? 'Plant 1 - Pune Hub' : activePlant);
+        const plant = logData.plant || (!activePlant || activePlant.startsWith('All') ? (get().plants[0]?.name || '') : activePlant);
 
         const log: ProductionLog = {
           ...logData,
@@ -1714,7 +1714,13 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
             ...state.auditLogs
           ]
         }));
-        mipsService.createRole(role).catch((err) => console.warn('Failed to sync Role to MySQL:', err));
+        mipsService.createRole(newRole).then((saved) => {
+          if (saved && saved.id) {
+            set((state) => ({
+              roles: state.roles.map((r) => (r.id === id ? { ...r, id: saved.id } : r))
+            }));
+          }
+        }).catch((err) => console.warn('Failed to sync Role to MySQL:', err));
       },
 
       updateRole: (id, updates) => {
@@ -1776,7 +1782,13 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
             ...state.auditLogs
           ]
         }));
-        mipsService.createDepartment(dept).catch((err) => console.warn('Failed to sync Department to MySQL:', err));
+        mipsService.createDepartment(newDept).then((saved) => {
+          if (saved && saved.id) {
+            set((state) => ({
+              departments: state.departments.map((d) => (d.id === id ? { ...d, id: saved.id } : d))
+            }));
+          }
+        }).catch((err) => console.warn('Failed to sync Department to MySQL:', err));
       },
 
       updateDepartment: (id, updates) => {
@@ -1811,7 +1823,13 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
             ...state.auditLogs
           ]
         }));
-        mipsService.createPlant(plant).catch((err) => console.warn('Failed to sync Plant to MySQL:', err));
+        mipsService.createPlant(newPlant).then((saved) => {
+          if (saved && saved.id) {
+            set((state) => ({
+              plants: state.plants.map((p) => (p.id === id ? { ...p, id: saved.id } : p))
+            }));
+          }
+        }).catch((err) => console.warn('Failed to sync Plant to MySQL:', err));
       },
 
       updatePlant: (id, updates) => {
@@ -1964,9 +1982,9 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
               email: u.email,
               phone: u.phoneNumber || '',
               role: u.role || 'Worker',
-              plant: u.plant || 'Plant 1 - Pune',
-              department: u.department || 'Final Assembly Line 1',
-              team: u.team || 'Line 1 Alpha',
+              plant: u.plant || '',
+              department: u.department || '',
+              team: u.team || '',
               supervisor: u.supervisor || '',
               status: u.status || 'Active',
               joiningDate: u.createdAt ? u.createdAt.split('T')[0] : '2026-01-01',
@@ -2088,7 +2106,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
           departments: [],
           employees: [],
           plants: [],
-          selectedPlant: 'Plant 1 - Pune Hub',
+          selectedPlant: 'All Plants (Global View)',
           auditLogs: [],
         });
       }

@@ -249,7 +249,7 @@ export const FinishedGoodsPage: React.FC = () => {
         category: product.category,
         wattage: product.wattage,
         batchLotNumber: inwardBatchNo,
-        plant: selectedPlant.startsWith('All') ? 'Plant 1 - Pune Hub' : selectedPlant,
+        plant: selectedPlant.startsWith('All') ? (plants[0]?.name || '') : selectedPlant,
         warehouse: targetWarehouse,
         quantityOnHand: inwardQty,
         allocatedQty: 0,
