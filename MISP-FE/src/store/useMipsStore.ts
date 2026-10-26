@@ -201,6 +201,13 @@ export interface Customer {
   paymentTerms: string;
 }
 
+export interface MasterCategory {
+  id: string;
+  name: string;
+  type: string; // 'material' | 'product' | 'customer'
+  description?: string;
+}
+
 export interface KitItem {
   materialId: string;
   materialCode: string;
@@ -488,8 +495,11 @@ interface MipsState {
   departments: Department[];
   employees: Employee[];
   plants: PlantLocation[];
+  categories: MasterCategory[];
 
   // Actions
+  addCategory: (cat: Omit<MasterCategory, 'id'>) => Promise<MasterCategory>;
+  deleteCategory: (id: string) => Promise<void>;
   addMaterial: (material: Omit<Material, 'id'>) => void;
   updateMaterial: (id: string, updates: Partial<Material>) => void;
   deleteMaterial: (id: string) => void;
@@ -608,6 +618,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
       departments: [],
       employees: [],
       plants: [],
+      categories: [],
       selectedPlant: 'All Plants (Global View)',
       setSelectedPlant: (plant) => set({ selectedPlant: plant }),
       auditLogs: [],
@@ -1805,6 +1816,38 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
         mipsService.deleteDepartment(id).catch((err) => console.warn('Failed to delete Department from MySQL:', err));
       },
 
+      // Master Categories Actions
+      addCategory: async (newCat) => {
+        const id = `cat-${Date.now()}`;
+        const cat: MasterCategory = { ...newCat, id };
+        set((state) => ({
+          categories: [...state.categories, cat]
+        }));
+        try {
+          const saved = await mipsService.createCategory(newCat);
+          if (saved && saved.id) {
+            set((state) => ({
+              categories: state.categories.map((c) => (c.id === id ? { ...c, id: saved.id } : c))
+            }));
+            return saved;
+          }
+        } catch (err) {
+          console.warn('Failed to sync Category to MySQL:', err);
+        }
+        return cat;
+      },
+
+      deleteCategory: async (id) => {
+        set((state) => ({
+          categories: state.categories.filter((c) => c.id !== id)
+        }));
+        try {
+          await mipsService.deleteCategory(id);
+        } catch (err) {
+          console.warn('Failed to delete Category from MySQL:', err);
+        }
+      },
+
       // Plant & Location Actions
       addPlant: (newPlant) => {
         const id = `plant-${Date.now()}`;
@@ -1936,6 +1979,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
             grnEntries,
             auditLogs,
             users,
+            categories,
           ] = await Promise.all([
             mipsService.getMaterials(),
             mipsService.getProducts(),
@@ -1955,10 +1999,12 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
             mipsService.getGRNEntries(),
             mipsService.getAuditLogs(),
             mipsService.getUsers(),
+            mipsService.getCategories(),
           ]);
 
           set({
             materials: materials || [],
+            categories: categories || [],
             products: (products || []).map((p: any) => ({
               ...p,
               bom: Array.isArray(p.bom)

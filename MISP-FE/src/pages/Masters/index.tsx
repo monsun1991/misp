@@ -52,6 +52,8 @@ export const MastersPage: React.FC = () => {
   const {
     materials,
     products,
+    categories,
+    addCategory,
     addMaterial,
     updateMaterial,
     deleteMaterial,
@@ -81,18 +83,20 @@ export const MastersPage: React.FC = () => {
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
   const [showAddWarehouseModal, setShowAddWarehouseModal] = useState(false);
 
-  // Dynamic Material & Product Categories
+  // Dynamic Material & Product Categories from Master Table & State
   const dynamicMaterialCategories = React.useMemo(() => {
     const defaultCats = ['Electronics', 'Mechanical', 'Optical', 'Hardware', 'Packaging', 'Raw Materials', 'Chemicals & Consumables'];
-    const fromMaterials = materials.map((m) => m.category).filter(Boolean);
-    return Array.from(new Set([...defaultCats, ...fromMaterials]));
-  }, [materials]);
+    const fromCategoriesTable = (categories || []).filter((c) => c.type === 'material').map((c) => c.name);
+    const fromMaterials = (materials || []).map((m) => m.category).filter(Boolean);
+    return Array.from(new Set([...fromCategoriesTable, ...defaultCats, ...fromMaterials]));
+  }, [categories, materials]);
 
   const dynamicProductCategories = React.useMemo(() => {
     const defaultCats = ['LED Bulbs', 'Downlights', 'Battens', 'Floodlights', 'Architectural & Gate', 'Street Lights', 'Strip Lights'];
-    const fromProducts = products.map((p) => p.category).filter(Boolean);
-    return Array.from(new Set([...defaultCats, ...fromProducts]));
-  }, [products]);
+    const fromCategoriesTable = (categories || []).filter((c) => c.type === 'product').map((c) => c.name);
+    const fromProducts = (products || []).map((p) => p.category).filter(Boolean);
+    return Array.from(new Set([...fromCategoriesTable, ...defaultCats, ...fromProducts]));
+  }, [categories, products]);
 
   // New Material form state
   const [newCode, setNewCode] = useState('');
@@ -246,6 +250,10 @@ export const MastersPage: React.FC = () => {
       ? customCategoryInput.trim()
       : newCategory;
 
+    if (isCustomCategory && customCategoryInput.trim()) {
+      addCategory({ name: customCategoryInput.trim(), type: 'material' });
+    }
+
     addMaterial({
       code: newCode,
       name: newName,
@@ -279,6 +287,10 @@ export const MastersPage: React.FC = () => {
     const finalCategory = isCustomProdCategory && customProdCategoryInput.trim()
       ? customProdCategoryInput.trim()
       : newProdCategory;
+
+    if (isCustomProdCategory && customProdCategoryInput.trim()) {
+      addCategory({ name: customProdCategoryInput.trim(), type: 'product' });
+    }
 
     const newProd: Product = {
       id: `prod-${Date.now()}`,
@@ -416,6 +428,10 @@ export const MastersPage: React.FC = () => {
       ? editCustomCategoryInput.trim()
       : editMatCategory;
 
+    if (isEditCustomCategory && editCustomCategoryInput.trim()) {
+      addCategory({ name: editCustomCategoryInput.trim(), type: 'material' });
+    }
+
     updateMaterial(editingMatId, {
       name: editMatName,
       category: finalCategory,
@@ -463,6 +479,10 @@ export const MastersPage: React.FC = () => {
     const finalCategory = isEditCustomProdCategory && editCustomProdCategoryInput.trim()
       ? editCustomProdCategoryInput.trim()
       : editProdCategory;
+
+    if (isEditCustomProdCategory && editCustomProdCategoryInput.trim()) {
+      addCategory({ name: editCustomProdCategoryInput.trim(), type: 'product' });
+    }
 
     updateProduct(editingProdId, {
       code: editProdCode,
@@ -1481,27 +1501,31 @@ export const MastersPage: React.FC = () => {
                       className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
                     />
                   ) : (
-                    <select
+                    <Select
                       value={newProdCategory}
-                      onChange={(e) => {
-                        if (e.target.value === '__custom__') {
+                      onValueChange={(val) => {
+                        if (val === '__custom__') {
                           setIsCustomProdCategory(true);
                           setCustomProdCategoryInput('');
                         } else {
-                          setNewProdCategory(e.target.value);
+                          setNewProdCategory(val);
                         }
                       }}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                     >
-                      {dynamicProductCategories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                      <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
-                        + Add Custom Category...
-                      </option>
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dynamicProductCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat} className="text-xs font-medium">
+                            {cat}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__custom__" className="text-xs font-bold text-[#146b68] dark:text-[#84cc16]">
+                          + Add Custom Category...
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
               </div>
@@ -1578,19 +1602,19 @@ export const MastersPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1">Component Category *</label>
-                <select
-                  value={newSupCat}
-                  onChange={(e) => setNewSupCat(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                  required
-                >
-                  <option value="Electronics (LEDs, Drivers, PCBs)">Electronics (LEDs, Drivers, PCBs)</option>
-                  <option value="Mechanical (Die-Cast, Housings, Endcaps)">Mechanical (Die-Cast, Housings, Endcaps)</option>
-                  <option value="Optical (Diffusers, Lenses, PMMA)">Optical (Diffusers, Lenses, PMMA)</option>
-                  <option value="Hardware (Fasteners, Cables, Connectors)">Hardware (Fasteners, Cables, Connectors)</option>
-                  <option value="Packaging (Cartons, Polybags)">Packaging (Cartons, Polybags)</option>
-                  <option value="General Components">General Components</option>
-                </select>
+                <Select value={newSupCat} onValueChange={setNewSupCat}>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder="Select Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Electronics (LEDs, Drivers, PCBs)">Electronics (LEDs, Drivers, PCBs)</SelectItem>
+                    <SelectItem value="Mechanical (Die-Cast, Housings, Endcaps)">Mechanical (Die-Cast, Housings, Endcaps)</SelectItem>
+                    <SelectItem value="Optical (Diffusers, Lenses, PMMA)">Optical (Diffusers, Lenses, PMMA)</SelectItem>
+                    <SelectItem value="Hardware (Fasteners, Cables, Connectors)">Hardware (Fasteners, Cables, Connectors)</SelectItem>
+                    <SelectItem value="Packaging (Cartons, Polybags)">Packaging (Cartons, Polybags)</SelectItem>
+                    <SelectItem value="General Components">General Components</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1686,27 +1710,31 @@ export const MastersPage: React.FC = () => {
                       className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
                     />
                   ) : (
-                    <select
+                    <Select
                       value={newCategory}
-                      onChange={(e) => {
-                        if (e.target.value === '__custom__') {
+                      onValueChange={(val) => {
+                        if (val === '__custom__') {
                           setIsCustomCategory(true);
                           setCustomCategoryInput('');
                         } else {
-                          setNewCategory(e.target.value);
+                          setNewCategory(val);
                         }
                       }}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                     >
-                      {dynamicMaterialCategories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                      <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
-                        + Add Custom Category...
-                      </option>
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dynamicMaterialCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat} className="text-xs font-medium">
+                            {cat}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__custom__" className="text-xs font-bold text-[#146b68] dark:text-[#84cc16]">
+                          + Add Custom Category...
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
               </div>
@@ -1725,42 +1753,35 @@ export const MastersPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Unit of Measure (UOM) *</label>
-                  <select
-                    value={newUom}
-                    onChange={(e) => setNewUom(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                    required
-                  >
-                    <option value="Pcs">Pcs (Pieces)</option>
-                    <option value="Nos">Nos (Numbers)</option>
-                    <option value="Mtr">Mtr (Meters)</option>
-                    <option value="Roll">Roll (Rolls)</option>
-                    <option value="Kg">Kg (Kilograms)</option>
-                    <option value="Set">Set (Sets)</option>
-                    <option value="Box">Box (Boxes)</option>
-                  </select>
+                  <Select value={newUom} onValueChange={setNewUom}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Select UOM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pcs">Pcs (Pieces)</SelectItem>
+                      <SelectItem value="Nos">Nos (Numbers)</SelectItem>
+                      <SelectItem value="Mtr">Mtr (Meters)</SelectItem>
+                      <SelectItem value="Roll">Roll (Rolls)</SelectItem>
+                      <SelectItem value="Kg">Kg (Kilograms)</SelectItem>
+                      <SelectItem value="Set">Set (Sets)</SelectItem>
+                      <SelectItem value="Box">Box (Boxes)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Primary Supplier *</label>
-                  <select
-                    value={newSupplier}
-                    onChange={(e) => setNewSupplier(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                    required
-                  >
-                    {suppliers.length === 0 ? (
-                      <option value="">No suppliers found. Please add a vendor first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Supplier --</option>
-                        {suppliers.map((s) => (
-                          <option key={s.id} value={s.name}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                  <Select value={newSupplier} onValueChange={setNewSupplier} disabled={suppliers.length === 0}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={suppliers.length === 0 ? "No suppliers found" : "-- Select Supplier --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s.id} value={s.name} className="text-xs">
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {suppliers.length === 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                       ⚠️ Please add a vendor in Vendors tab first.
@@ -1769,25 +1790,18 @@ export const MastersPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Assigned Warehouse *</label>
-                  <select
-                    value={newWarehouse}
-                    onChange={(e) => setNewWarehouse(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                    required
-                  >
-                    {warehouses.length === 0 ? (
-                      <option value="">No warehouses found. Please add a warehouse first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Warehouse --</option>
-                        {warehouses.map((w) => (
-                          <option key={w.id} value={w.name}>
-                            {w.name} ({w.plant})
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                  <Select value={newWarehouse} onValueChange={setNewWarehouse} disabled={warehouses.length === 0}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={warehouses.length === 0 ? "No warehouses found" : "-- Select Warehouse --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses.map((w) => (
+                        <SelectItem key={w.id} value={w.name} className="text-xs">
+                          {w.name} ({w.plant})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {warehouses.length === 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                       ⚠️ Please add a warehouse in Warehouses tab first.
@@ -1868,35 +1882,33 @@ export const MastersPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Plant</label>
-                  <select
-                    value={newWhPlant}
-                    onChange={(e) => setNewWhPlant(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    {(plants || []).map((p) => (
-                      <option key={p.id} value={`${p.name} - ${p.city}`}>
-                        {p.name} ({p.city})
-                      </option>
-                    ))}
-                    {(!plants || plants.length === 0) && (
-                      <option value="">No plants registered yet</option>
-                    )}
-                  </select>
+                  <Select value={newWhPlant} onValueChange={setNewWhPlant}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Select Plant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(plants || []).map((p) => (
+                        <SelectItem key={p.id} value={`${p.name} - ${p.city}`}>
+                          {p.name} ({p.city})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Storage Type *</label>
-                  <select
-                    value={newWhType}
-                    onChange={(e) => setNewWhType(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                    required
-                  >
-                    <option value="Raw Materials">Raw Materials Store</option>
-                    <option value="Finished Goods & Packaging">Finished Goods & Packaging Store</option>
-                    <option value="WIP & Assembly Buffer">WIP & Assembly Buffer Store</option>
-                    <option value="Quarantine & QC Hold">Quarantine & QC Hold Zone</option>
-                    <option value="Engineering & Samples">Engineering & Samples Room</option>
-                  </select>
+                  <Select value={newWhType} onValueChange={setNewWhType}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Storage Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Raw Materials">Raw Materials Store</SelectItem>
+                      <SelectItem value="Finished Goods & Packaging">Finished Goods & Packaging Store</SelectItem>
+                      <SelectItem value="WIP & Assembly Buffer">WIP & Assembly Buffer Store</SelectItem>
+                      <SelectItem value="Quarantine & QC Hold">Quarantine & QC Hold Zone</SelectItem>
+                      <SelectItem value="Engineering & Samples">Engineering & Samples Room</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -1991,40 +2003,45 @@ export const MastersPage: React.FC = () => {
                       className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
                     />
                   ) : (
-                    <select
+                    <Select
                       value={editMatCategory}
-                      onChange={(e) => {
-                        if (e.target.value === '__custom__') {
+                      onValueChange={(val) => {
+                        if (val === '__custom__') {
                           setIsEditCustomCategory(true);
                           setEditCustomCategoryInput('');
                         } else {
-                          setEditMatCategory(e.target.value);
+                          setEditMatCategory(val);
                         }
                       }}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                     >
-                      {dynamicMaterialCategories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                      <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
-                        + Add Custom Category...
-                      </option>
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dynamicMaterialCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat} className="text-xs font-medium">
+                            {cat}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__custom__" className="text-xs font-bold text-[#146b68] dark:text-[#84cc16]">
+                          + Add Custom Category...
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Status</label>
-                  <select
-                    value={editMatStatus}
-                    onChange={(e) => setEditMatStatus(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Under Review">Under Review</option>
-                    <option value="Discontinued">Discontinued</option>
-                  </select>
+                  <Select value={editMatStatus} onValueChange={(val) => setEditMatStatus(val as any)}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Under Review">Under Review</SelectItem>
+                      <SelectItem value="Discontinued">Discontinued</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -2041,17 +2058,18 @@ export const MastersPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Unit of Measure (UOM)</label>
-                  <select
-                    value={editMatUom}
-                    onChange={(e) => setEditMatUom(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    <option value="Pcs">Pcs (Pieces)</option>
-                    <option value="Sets">Sets</option>
-                    <option value="Meters">Meters</option>
-                    <option value="Kg">Kg</option>
-                    <option value="Rolls">Rolls</option>
-                  </select>
+                  <Select value={editMatUom} onValueChange={setEditMatUom}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Select UOM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pcs">Pcs (Pieces)</SelectItem>
+                      <SelectItem value="Sets">Sets</SelectItem>
+                      <SelectItem value="Meters">Meters</SelectItem>
+                      <SelectItem value="Kg">Kg</SelectItem>
+                      <SelectItem value="Rolls">Rolls</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Unit Standard Cost (₹)</label>
@@ -2069,45 +2087,33 @@ export const MastersPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Primary Supplier</label>
-                  <select
-                    value={editMatSupplier}
-                    onChange={(e) => setEditMatSupplier(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                  >
-                    {suppliers.length === 0 ? (
-                      <option value="">No suppliers found. Please add a vendor first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Supplier --</option>
-                        {suppliers.map((s) => (
-                          <option key={s.id} value={s.name}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                  <Select value={editMatSupplier} onValueChange={setEditMatSupplier} disabled={suppliers.length === 0}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={suppliers.length === 0 ? "No suppliers found" : "-- Select Supplier --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s.id} value={s.name} className="text-xs">
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Assigned Store / Buffer</label>
-                  <select
-                    value={editMatWarehouse}
-                    onChange={(e) => setEditMatWarehouse(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                  >
-                    {warehouses.length === 0 ? (
-                      <option value="">No warehouses found. Please add a warehouse first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Warehouse --</option>
-                        {warehouses.map((w) => (
-                          <option key={w.id} value={w.name}>
-                            {w.name} ({w.plant})
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                  <Select value={editMatWarehouse} onValueChange={setEditMatWarehouse} disabled={warehouses.length === 0}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={warehouses.length === 0 ? "No warehouses found" : "-- Select Warehouse --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses.map((w) => (
+                        <SelectItem key={w.id} value={w.name} className="text-xs">
+                          {w.name} ({w.plant})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -2203,27 +2209,31 @@ export const MastersPage: React.FC = () => {
                       className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
                     />
                   ) : (
-                    <select
+                    <Select
                       value={editProdCategory}
-                      onChange={(e) => {
-                        if (e.target.value === '__custom__') {
+                      onValueChange={(val) => {
+                        if (val === '__custom__') {
                           setIsEditCustomProdCategory(true);
                           setEditCustomProdCategoryInput('');
                         } else {
-                          setEditProdCategory(e.target.value);
+                          setEditProdCategory(val);
                         }
                       }}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                     >
-                      {dynamicProductCategories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                      <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
-                        + Add Custom Category...
-                      </option>
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dynamicProductCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat} className="text-xs font-medium">
+                            {cat}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__custom__" className="text-xs font-bold text-[#146b68] dark:text-[#84cc16]">
+                          + Add Custom Category...
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
               </div>
@@ -2241,18 +2251,19 @@ export const MastersPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Wattage Spec</label>
-                  <select
-                    value={editProdWattage}
-                    onChange={(e) => setEditProdWattage(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    <option value="7W">7W High Efficiency</option>
-                    <option value="9W">9W Standard</option>
-                    <option value="12W">12W High-Lumen</option>
-                    <option value="15W">15W Commercial</option>
-                    <option value="20W">20W Industrial Batten</option>
-                    <option value="50W">50W Outdoor Flood</option>
-                  </select>
+                  <Select value={editProdWattage} onValueChange={setEditProdWattage}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Wattage" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7W">7W High Efficiency</SelectItem>
+                      <SelectItem value="9W">9W Standard</SelectItem>
+                      <SelectItem value="12W">12W High-Lumen</SelectItem>
+                      <SelectItem value="15W">15W Commercial</SelectItem>
+                      <SelectItem value="20W">20W Industrial Batten</SelectItem>
+                      <SelectItem value="50W">50W Outdoor Flood</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Standard Cost (₹)</label>
@@ -2269,14 +2280,16 @@ export const MastersPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1">Status</label>
-                <select
-                  value={editProdStatus}
-                  onChange={(e) => setEditProdStatus(e.target.value as any)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                >
-                  <option value="Active">Active (In Catalog)</option>
-                  <option value="Discontinued">Discontinued</option>
-                </select>
+                <Select value={editProdStatus} onValueChange={(val) => setEditProdStatus(val as any)}>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Discontinued">Discontinued</SelectItem>
+                    <SelectItem value="Engineering Hold">Engineering Hold</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t">
@@ -2319,18 +2332,18 @@ export const MastersPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1">Category Supplied *</label>
-                <select
-                  required
-                  value={editSupCat}
-                  onChange={(e) => setEditSupCat(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                >
-                  <option value="Electronics">Electronics (LED Diodes, Drivers, PCBs)</option>
-                  <option value="Mechanical">Mechanical (Die-Cast Aluminium, Housings)</option>
-                  <option value="Optical">Optical (Diffusers, Lenses, Reflectors)</option>
-                  <option value="Hardware">Hardware (Screws, Gaskets, Fasteners)</option>
-                  <option value="Packaging">Packaging (Retail Cartons, Corrugated Boxes)</option>
-                </select>
+                <Select value={editSupCat} onValueChange={setEditSupCat}>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder="Category Supplied" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Electronics">Electronics (LED Diodes, Drivers, PCBs)</SelectItem>
+                    <SelectItem value="Mechanical">Mechanical (Die-Cast Aluminium, Housings)</SelectItem>
+                    <SelectItem value="Optical">Optical (Diffusers, Lenses, Reflectors)</SelectItem>
+                    <SelectItem value="Hardware">Hardware (Screws, Gaskets, Fasteners)</SelectItem>
+                    <SelectItem value="Packaging">Packaging (Retail Cartons, Corrugated Boxes)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -2417,34 +2430,33 @@ export const MastersPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Plant Location</label>
-                  <select
-                    value={editWhPlant}
-                    onChange={(e) => setEditWhPlant(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                  >
-                    {(plants || []).map((p) => (
-                      <option key={p.id} value={`${p.name} - ${p.city}`}>
-                        {p.name} ({p.city})
-                      </option>
-                    ))}
-                    {(!plants || plants.length === 0) && (
-                      <option value="">No plants registered yet</option>
-                    )}
-                  </select>
+                  <Select value={editWhPlant} onValueChange={setEditWhPlant}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Select Plant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(plants || []).map((p) => (
+                        <SelectItem key={p.id} value={`${p.name} - ${p.city}`}>
+                          {p.name} ({p.city})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Storage Type</label>
-                  <select
-                    value={editWhType}
-                    onChange={(e) => setEditWhType(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                  >
-                    <option value="Raw Materials">Raw Materials Store</option>
-                    <option value="Finished Goods & Packaging">Finished Goods & Packaging Store</option>
-                    <option value="WIP & Assembly Buffer">WIP & Assembly Buffer Store</option>
-                    <option value="Quarantine & QC Hold">Quarantine & QC Hold Zone</option>
-                    <option value="Engineering & Samples">Engineering & Samples Room</option>
-                  </select>
+                  <Select value={editWhType} onValueChange={setEditWhType}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Storage Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Raw Materials">Raw Materials Store</SelectItem>
+                      <SelectItem value="Finished Goods & Packaging">Finished Goods & Packaging Store</SelectItem>
+                      <SelectItem value="WIP & Assembly Buffer">WIP & Assembly Buffer Store</SelectItem>
+                      <SelectItem value="Quarantine & QC Hold">Quarantine & QC Hold Zone</SelectItem>
+                      <SelectItem value="Engineering & Samples">Engineering & Samples Room</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -2526,16 +2538,17 @@ export const MastersPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Classification</label>
-                  <select
-                    value={editCustCat}
-                    onChange={(e) => setEditCustCat(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    <option value="B2B Brand OEM">B2B Brand OEM</option>
-                    <option value="Regional Distributor">Regional Distributor</option>
-                    <option value="Wholesale Trader">Wholesale Trader</option>
-                    <option value="Direct Institutional">Direct Institutional</option>
-                  </select>
+                  <Select value={editCustCat} onValueChange={(val) => setEditCustCat(val as any)}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Classification" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="B2B Brand OEM">B2B Brand OEM</SelectItem>
+                      <SelectItem value="Regional Distributor">Regional Distributor</SelectItem>
+                      <SelectItem value="Wholesale Trader">Wholesale Trader</SelectItem>
+                      <SelectItem value="Direct Institutional">Direct Institutional</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -2551,16 +2564,17 @@ export const MastersPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Payment / Credit Terms</label>
-                  <select
-                    value={editCustPayment}
-                    onChange={(e) => setEditCustPayment(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                  >
-                    <option value="100% Advance">100% Advance</option>
-                    <option value="30 Days PDC">30 Days PDC</option>
-                    <option value="45 Days Net Credit">45 Days Net Credit</option>
-                    <option value="Letter of Credit (LC)">Letter of Credit (LC)</option>
-                  </select>
+                  <Select value={editCustPayment} onValueChange={setEditCustPayment}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Payment Terms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="100% Advance">100% Advance</SelectItem>
+                      <SelectItem value="30 Days PDC">30 Days PDC</SelectItem>
+                      <SelectItem value="45 Days Net Credit">45 Days Net Credit</SelectItem>
+                      <SelectItem value="Letter of Credit (LC)">Letter of Credit (LC)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

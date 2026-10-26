@@ -38,5 +38,6 @@ export const API_ENDPOINTS = {
         warehouses: `${BASE_URL}/mips/warehouses`,
         grnEntries: `${BASE_URL}/mips/grn-entries`,
         auditLogs: `${BASE_URL}/mips/audit-logs`,
+        categories: `${BASE_URL}/mips/categories`,
     }
 };

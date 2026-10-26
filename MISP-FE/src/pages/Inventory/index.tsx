@@ -50,6 +50,8 @@ export const InventoryPage: React.FC = () => {
     finishedGoods: rawFinishedGoods,
     stockLedger: rawStockLedger,
     products,
+    categories,
+    addCategory,
     employees,
     adjustStock,
     updateMaterial,
@@ -170,6 +172,10 @@ export const InventoryPage: React.FC = () => {
       status: editMatStatus,
     });
 
+    if (isEditCustomCategory && editCustomCategoryInput.trim()) {
+      addCategory({ name: editCustomCategoryInput.trim(), type: 'material' });
+    }
+
     setShowEditMatModal(false);
     setIsEditCustomCategory(false);
     setEditCustomCategoryInput('');
@@ -177,9 +183,10 @@ export const InventoryPage: React.FC = () => {
 
   // Extract unique warehouses dynamically for the active plant
   const dynamicWarehouses = Array.from(new Set(materials.map((m) => m.warehouse))).filter(Boolean);
-  // Extract all distinct categories from materials
+  // Extract all distinct categories from database categories table & materials
   const dynamicCategories = Array.from(
     new Set([
+      ...(categories || []).filter((c) => c.type === 'material').map((c) => c.name),
       'Electronics',
       'Mechanical',
       'Optical',
@@ -1586,74 +1593,80 @@ export const InventoryPage: React.FC = () => {
                         className="h-9 font-medium border-[#84cc16] focus:ring-[#84cc16]"
                       />
                     ) : (
-                      <select
+                      <Select
                         value={editMatCategory}
-                        onChange={(e) => {
-                          if (e.target.value === '__custom__') {
+                        onValueChange={(val) => {
+                          if (val === '__custom__') {
                             setIsEditCustomCategory(true);
                             setEditCustomCategoryInput('');
                           } else {
-                            setEditMatCategory(e.target.value);
+                            setEditMatCategory(val);
                           }
                         }}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                       >
-                        {dynamicCategories.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                        <option value="__custom__" className="font-bold text-[#146b68] dark:text-[#84cc16]">
-                          + Add Custom Category...
-                        </option>
-                      </select>
+                        <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                          <SelectValue placeholder="Select Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dynamicCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat} className="text-xs font-medium">
+                              {cat}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="__custom__" className="text-xs font-bold text-[#146b68] dark:text-[#84cc16]">
+                            + Add Custom Category...
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     )}
                   </div>
                   <div>
                     <label className="block font-semibold mb-1">Unit of Measure (UOM)</label>
-                    <select
-                      value={editMatUom}
-                      onChange={(e) => setEditMatUom(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                    >
-                      <option value="Pcs">Pcs</option>
-                      <option value="Meters">Meters</option>
-                      <option value="Sets">Sets</option>
-                      <option value="Kg">Kg</option>
-                      <option value="Rolls">Rolls</option>
-                    </select>
+                    <Select value={editMatUom} onValueChange={setEditMatUom}>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="Select UOM" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pcs">Pcs</SelectItem>
+                        <SelectItem value="Meters">Meters</SelectItem>
+                        <SelectItem value="Sets">Sets</SelectItem>
+                        <SelectItem value="Kg">Kg</SelectItem>
+                        <SelectItem value="Rolls">Rolls</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold mb-1">Primary Supplier</label>
-                    <select
-                      value={editMatSupplier}
-                      onChange={(e) => setEditMatSupplier(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                    >
-                      <option value="">-- Select Supplier --</option>
-                      {allSuppliers.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={editMatSupplier} onValueChange={setEditMatSupplier}>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="-- Select Supplier --" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allSuppliers.map((s) => (
+                          <SelectItem key={s} value={s} className="text-xs">
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="block font-semibold mb-1">Assigned Warehouse</label>
-                    <select
-                      value={editMatWarehouse}
-                      onChange={(e) => setEditMatWarehouse(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                    >
-                      {dynamicWarehouses.map((wh) => (
-                        <option key={wh} value={wh}>
-                          {wh}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={editMatWarehouse} onValueChange={setEditMatWarehouse}>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="-- Select Warehouse --" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dynamicWarehouses.map((wh) => (
+                          <SelectItem key={wh} value={wh} className="text-xs">
+                            {wh}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

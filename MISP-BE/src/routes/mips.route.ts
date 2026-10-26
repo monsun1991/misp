@@ -161,4 +161,11 @@ router.delete("/plants/:id", catchAsync(async (req: Request, res: Response) => r
 router.get("/audit-logs", catchAsync(async (_req: Request, res: Response) => res.json(await adminCtrl.getAuditLogs())));
 router.post("/audit-logs", catchAsync(async (req: Request, res: Response) => res.status(201).json(await adminCtrl.createAuditLog(req.body))));
 
+// Categories (Dynamic Master Table)
+import { categoryCtrl } from "../controllers/category.controller";
+router.get("/categories", catchAsync(async (req: Request, res: Response) => res.json(await categoryCtrl.getCategories(req.query.type as string))));
+router.post("/categories", catchAsync(async (req: Request, res: Response) => res.status(201).json(await categoryCtrl.createCategory(req.body))));
+router.put("/categories/:id", catchAsync(async (req: Request, res: Response) => res.json(await categoryCtrl.updateCategory(req.params.id, req.body))));
+router.delete("/categories/:id", catchAsync(async (req: Request, res: Response) => res.json(await categoryCtrl.deleteCategory(req.params.id))));
+
 export default router;

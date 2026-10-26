@@ -277,6 +277,27 @@ export const mipsService = {
     await api.delete(`${API_ENDPOINTS.mips.departments}/${id}`);
   },
 
+  // Master Categories
+  getCategories: async (type?: string): Promise<any[]> => {
+    try {
+      const res = await api.get(API_ENDPOINTS.mips.categories, { params: type ? { type } : undefined });
+      return res.data?.data || [];
+    } catch (e) {
+      return [];
+    }
+  },
+  createCategory: async (data: any): Promise<any> => {
+    const res = await api.post(API_ENDPOINTS.mips.categories, data);
+    return res.data?.data;
+  },
+  updateCategory: async (id: string, data: any): Promise<any> => {
+    const res = await api.put(`${API_ENDPOINTS.mips.categories}/${id}`, data);
+    return res.data?.data;
+  },
+  deleteCategory: async (id: string): Promise<void> => {
+    await api.delete(`${API_ENDPOINTS.mips.categories}/${id}`);
+  },
+
   // Dynamic Plants
   getPlants: async (): Promise<any[]> => {
     try {
