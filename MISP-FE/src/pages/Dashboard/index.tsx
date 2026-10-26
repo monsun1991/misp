@@ -432,7 +432,14 @@ export const DashboardPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {forecastPreview.map((item, idx) => (
+                {forecastPreview.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-slate-400">
+                      No materials found in inventory master.
+                    </td>
+                  </tr>
+                ) : (
+                  forecastPreview.map((item, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                     <td className="py-3 px-3 font-medium text-slate-800 dark:text-slate-200">{item.material}</td>
                     <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">{item.code}</td>
@@ -465,7 +472,7 @@ export const DashboardPage: React.FC = () => {
                       </Link>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>
@@ -488,24 +495,30 @@ export const DashboardPage: React.FC = () => {
             </Link>
           </CardHeader>
           <CardContent className="space-y-2">
-            {stockLedger.slice(0, 4).map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors text-xs"
-              >
-                <div>
-                  <div className="font-semibold text-slate-800 dark:text-slate-200">{entry.materialName}</div>
-                  <div className="text-[11px] text-slate-500">
-                    {entry.transactionType} &bull; Ref: <span className="font-mono">{entry.referenceNo}</span> &bull; {entry.date}
+            {stockLedger.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-xs">
+                No physical ledger movements recorded.
+              </div>
+            ) : (
+              stockLedger.slice(0, 4).map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors text-xs"
+                >
+                  <div>
+                    <div className="font-semibold text-slate-800 dark:text-slate-200">{entry.materialName}</div>
+                    <div className="text-[11px] text-slate-500">
+                      {entry.transactionType} &bull; Ref: <span className="font-mono">{entry.referenceNo}</span> &bull; {entry.date}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {entry.inQty > 0 && <span className="font-bold text-emerald-600">+{entry.inQty} In</span>}
+                    {entry.outQty > 0 && <span className="font-bold text-red-500">-{entry.outQty} Out</span>}
+                    <div className="text-[10px] text-slate-500">Bal: {entry.balanceQty}</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  {entry.inQty > 0 && <span className="font-bold text-emerald-600">+{entry.inQty} In</span>}
-                  {entry.outQty > 0 && <span className="font-bold text-red-500">-{entry.outQty} Out</span>}
-                  <div className="text-[10px] text-slate-500">Bal: {entry.balanceQty}</div>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -523,53 +536,60 @@ export const DashboardPage: React.FC = () => {
             </Link>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 flex items-center justify-center font-bold">
-                  RK
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-800 dark:text-slate-200">Ravi Kumar (Line 1)</div>
-                  <div className="text-[11px] text-slate-500">KIT-2026-1001 &bull; 100 units 12W LED</div>
-                </div>
+            {kits.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-xs">
+                No active material kits held by staff.
               </div>
-              <div className="text-right">
-                <span className="font-semibold text-amber-600">22 units pending return</span>
-                <div className="text-[10px] text-slate-400">Reconciliation Pending</div>
-              </div>
-            </div>
+            ) : (
+              kits.slice(0, 4).map((kit) => {
+                const pendingUnits = (kit.items || []).reduce(
+                  (acc, it) => acc + (it.balanceWithEmployee || 0),
+                  0
+                );
+                const empName = kit.assignedEmployee || 'Unassigned';
+                const initials =
+                  empName
+                    .split(' ')
+                    .map((n) => n[0])
+                    .filter(Boolean)
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase() || 'EM';
 
-            <div className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 flex items-center justify-center font-bold">
-                  AS
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-800 dark:text-slate-200">Amit Sharma (Line 1)</div>
-                  <div className="text-[11px] text-slate-500">KIT-2026-1002 &bull; 150 units 12W LED</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="font-semibold text-amber-600">13 units pending return</span>
-                <div className="text-[10px] text-slate-400">In Assembly</div>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 flex items-center justify-center font-bold">
-                  PV
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-800 dark:text-slate-200">Priya Verma (Line 2)</div>
-                  <div className="text-[11px] text-slate-500">KIT-2026-0988 &bull; 200 units 9W LED</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="font-semibold text-emerald-600">Reconciled & Closed</span>
-                <div className="text-[10px] text-slate-400">0 Material Pending</div>
-              </div>
-            </div>
+                return (
+                  <div
+                    key={kit.id}
+                    className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 flex items-center justify-center font-bold">
+                        {initials}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">
+                          {empName} {kit.department ? `(${kit.department})` : ''}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          {kit.kitNumber} &bull; {kit.plannedBatchQty} units {kit.productName}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span
+                        className={`font-semibold ${
+                          pendingUnits > 0 ? 'text-amber-600' : 'text-emerald-600'
+                        }`}
+                      >
+                        {pendingUnits > 0
+                          ? `${pendingUnits} units pending return`
+                          : 'Reconciled & Closed'}
+                      </span>
+                      <div className="text-[10px] text-slate-400">{kit.status}</div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </CardContent>
         </Card>
       </div>
