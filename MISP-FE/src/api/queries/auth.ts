@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { loginAPI, logoutAPI, sendResetOtpAPI, resetPasswordWithOtpAPI } from '../services/user.service';
+import { loginAPI, logoutAPI, changePinAPI, sendResetOtpAPI, resetPasswordWithOtpAPI } from '../services/user.service';
 import { useUserStore } from '@/store/useAuthStore';
+import { useMipsStore } from '@/store/useMipsStore';
 
 export const useAuth = () => {
     const store = useUserStore();
@@ -13,15 +14,22 @@ export const useAuth = () => {
             if (data.success) {
                 queryClient.clear();
                 const isExternal = store.isExternal;
+                const permissions = data.data.permissions || [];
                 store.setAuth(
                     data.data.token,
                     data.data.token,
                     data.data.user,
                     null,
-                    [],
+                    permissions,
                     isExternal
                 );
                 store.setProfileImage(data.data.user.profilePicture);
+                
+                // UBAC: Scope active plant facility to user assigned scope
+                if (data.data.user?.plant) {
+                    useMipsStore.getState().setSelectedPlant(data.data.user.plant);
+                }
+
                 toast.success("Login successful");
             }
         },
@@ -35,6 +43,22 @@ export const useAuth = () => {
         mutationFn: ({ accessToken }) => logoutAPI(accessToken),
         onError: (error: any) => {
             console.error('Logout API failed:', error);
+        },
+    });
+
+    const changePinMutation = useMutation<any, Error, { currentPin?: string; newPin: string }>({
+        mutationFn: changePinAPI,
+        onSuccess: (data) => {
+            if (data.success) {
+                if (data.data?.user) {
+                    store.updateUser(data.data.user);
+                }
+                toast.success("PIN changed successfully!");
+            }
+        },
+        onError: (error: any) => {
+            const message = error?.response?.data?.message || error.message || 'Failed to update PIN';
+            toast.error(message);
         },
     });
 
@@ -59,6 +83,7 @@ export const useAuth = () => {
         accessToken: store.accessToken,
         refreshToken: store.refreshToken,
         user: store.user,
+        permissions: store.permissions,
         isExternal: store.isExternal,
         setAuth: store.setAuth,
         updateUser: store.updateUser,
@@ -67,6 +92,7 @@ export const useAuth = () => {
         setIsExternal: store.setIsExternal,
         login: loginMutation,
         logoutMutation,
+        changePin: changePinMutation,
         sendResetOtp: sendResetOtpMutation,
         resetPasswordWithOtp: resetPasswordWithOtpMutation,
         isLoading: loginMutation.isPending,

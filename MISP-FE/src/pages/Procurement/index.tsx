@@ -10,7 +10,8 @@ import {
   FileCheck,
   CheckCircle2,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Edit2
 } from 'lucide-react';
 import { useMipsStore, isPlantMatch } from '@/store/useMipsStore';
 import type { PurchaseOrder } from '@/store/useMipsStore';
@@ -18,13 +19,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TablePagination, usePagination } from '@/components/common/TablePagination';
 
 export const ProcurementPage: React.FC = () => {
   const {
     purchaseOrders: rawPurchaseOrders,
     materials: rawMaterials,
+    employees,
     selectedPlant,
     createPurchaseOrder,
+    updatePO,
     createGRN,
     updatePOStatus
   } = useMipsStore();
@@ -32,13 +44,69 @@ export const ProcurementPage: React.FC = () => {
   const purchaseOrders = rawPurchaseOrders.filter((po) => isPlantMatch(po.plant, selectedPlant));
   const materials = rawMaterials.filter((m) => isPlantMatch(m.plant, selectedPlant));
 
+  const allSuppliers = React.useMemo(() => {
+    const list = Array.from(new Set(rawMaterials.map((m) => m.supplier).filter(Boolean)));
+    return list.length > 0 ? list : ['Lumileds India Components', 'Bridgelux Semiconductor', 'Delta Electronics India'];
+  }, [rawMaterials]);
+
+  const authorizedEmployees = React.useMemo(() => {
+    const plantEmps = (employees || []).filter((e) => isPlantMatch(e.plant, selectedPlant));
+    return plantEmps.length > 0 ? plantEmps : (employees || []);
+  }, [employees, selectedPlant]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Modals
   const [showPOModal, setShowPOModal] = useState(false);
   const [showGRNModal, setShowGRNModal] = useState(false);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
+
+  // Edit PO form state
+  const [showEditPOModal, setShowEditPOModal] = useState(false);
+  const [editingPOId, setEditingPOId] = useState('');
+  const [editPOExpectedDate, setEditPOExpectedDate] = useState('');
+  const [editPOOrderedQty, setEditPOOrderedQty] = useState<number>(0);
+  const [editPOUnitPrice, setEditPOUnitPrice] = useState<number>(0);
+  const [editPOTransporter, setEditPOTransporter] = useState('');
+  const [editPOTracking, setEditPOTracking] = useState('');
+  const [editPONotes, setEditPONotes] = useState('');
+  const [editPOStatus, setEditPOStatus] = useState<PurchaseOrder['status']>('Ordered');
+
+  const handleOpenEditPO = (po: PurchaseOrder) => {
+    setEditingPOId(po.id);
+    setEditPOExpectedDate(po.expectedDeliveryDate);
+    setEditPOOrderedQty(po.orderedQty);
+    setEditPOUnitPrice(po.unitPrice ?? po.unitRate ?? 0);
+    setEditPOTransporter(po.transporter || '');
+    setEditPOTracking(po.trackingNumber || po.trackingNo || '');
+    setEditPONotes(po.notes || '');
+    setEditPOStatus(po.status);
+    setShowEditPOModal(true);
+  };
+
+  const handleSaveEditPO = (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetPO = purchaseOrders.find((p) => p.id === editingPOId);
+    const receivedQty = targetPO?.receivedQty || 0;
+    const newPending = Math.max(0, editPOOrderedQty - receivedQty);
+    const totalAmount = editPOOrderedQty * editPOUnitPrice;
+
+    updatePO(editingPOId, {
+      expectedDeliveryDate: editPOExpectedDate,
+      orderedQty: editPOOrderedQty,
+      pendingQty: newPending,
+      unitPrice: editPOUnitPrice,
+      totalAmount,
+      transporter: editPOTransporter,
+      trackingNumber: editPOTracking,
+      notes: editPONotes,
+      status: editPOStatus,
+    });
+    setShowEditPOModal(false);
+  };
 
   // New PO form state
   const [newPOMatId, setNewPOMatId] = useState(materials[0]?.id || '');
@@ -72,16 +140,39 @@ export const ProcurementPage: React.FC = () => {
   const [grnRejected, setGrnRejected] = useState<number>(0);
   const [grnDamaged, setGrnDamaged] = useState<number>(0);
   const [grnWarehouse, setGrnWarehouse] = useState(materials[0]?.warehouse || 'Main Raw Material Store');
+  const [grnInspector, setGrnInspector] = useState('Dr. Vikram Malhotra (Quality Inspector)');
   const [grnNotes, setGrnNotes] = useState('');
 
-  const filteredPOs = purchaseOrders.filter((po) => {
-    const matchesSearch =
-      po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.materialName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || po.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredPOs = React.useMemo(() => {
+    return purchaseOrders.filter((po) => {
+      const matchesSearch =
+        po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        po.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        po.materialName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'All' || po.status === statusFilter;
+
+      const pDate = po.poDate ? po.poDate.split('T')[0] : '';
+      const matchesDate =
+        (!startDate || pDate >= startDate) &&
+        (!endDate || pDate <= endDate);
+
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [purchaseOrders, searchTerm, statusFilter, startDate, endDate]);
+
+  const {
+    currentPage: poPage,
+    setCurrentPage: setPoPage,
+    pageSize: poPageSize,
+    setPageSize: setPoPageSize,
+    totalItems: totalPoItems,
+    totalPages: totalPoPages,
+    paginatedItems: paginatedPOs,
+  } = usePagination(filteredPOs, 10);
+
+  React.useEffect(() => {
+    setPoPage(1);
+  }, [searchTerm, statusFilter, startDate, endDate]);
 
   const handleCreatePO = (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,11 +226,11 @@ export const ProcurementPage: React.FC = () => {
         rejectedQty: grnRejected,
         damagedQty: grnDamaged,
         warehouse: grnWarehouse,
-        inspectedBy: 'Quality Assurance Inspector',
+        inspectedBy: grnInspector,
         notes: grnNotes + (grnRejected > 0 ? ` | Rejected: ${grnRejected} units` : '') + (grnDamaged > 0 ? ` | Damaged: ${grnDamaged} units` : ''),
         plant: selectedPO.plant || selectedPlant,
       },
-      'QA & Store Incharge'
+      grnInspector
     );
 
     // Auto-set PO status: Partially Received if not all qty received, else Received (Fully Closed)
@@ -239,19 +330,49 @@ export const ProcurementPage: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-8 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2"
-              >
-                <option value="All">All Statuses</option>
-                <option value="Ordered">Ordered (Pending Dispatch)</option>
-                <option value="In Transit">In Transit</option>
-                <option value="Partially Received">Partially Received</option>
-                <option value="Received">Received (Fully Closed)</option>
-                <option value="Closed">Closed</option>
-              </select>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select value={statusFilter} onValueChange={(val: any) => setStatusFilter(val)}>
+                <SelectTrigger className="w-[170px] h-8 text-xs">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Statuses</SelectItem>
+                  <SelectItem value="Ordered">Ordered (Pending Dispatch)</SelectItem>
+                  <SelectItem value="In Transit">In Transit</SelectItem>
+                  <SelectItem value="Partially Received">Partially Received</SelectItem>
+                  <SelectItem value="Received">Received (Fully Closed)</SelectItem>
+                  <SelectItem value="Closed">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center gap-1.5 text-xs">
+                <DatePicker
+                  value={startDate}
+                  onChange={setStartDate}
+                  placeholder="Start date"
+                  className="w-32"
+                />
+                <span className="text-slate-400 text-[10px]">to</span>
+                <DatePicker
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="End date"
+                  className="w-32"
+                />
+                {(startDate || endDate) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setStartDate('');
+                      setEndDate('');
+                    }}
+                    className="h-8 px-2 text-xs text-rose-500 hover:text-rose-700"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -272,7 +393,7 @@ export const ProcurementPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredPOs.map((po) => (
+                {paginatedPOs.map((po) => (
                   <tr key={po.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                     <td className="py-3 px-3 font-mono font-semibold text-blue-600">{po.poNumber}</td>
                     <td className="py-3 px-3 text-slate-500">{po.poDate}</td>
@@ -321,6 +442,16 @@ export const ProcurementPage: React.FC = () => {
                       {po.status !== 'Received' && po.status !== 'Closed' ? (
                         <div className="flex items-center justify-end gap-1.5">
                           <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenEditPO(po)}
+                            className="h-7 text-xs border-slate-200 text-slate-700 hover:bg-slate-100 gap-1 font-medium"
+                            title="Edit Purchase Order"
+                          >
+                            <Edit2 className="w-3 h-3 text-slate-500" />
+                            Edit
+                          </Button>
+                          <Button
                             size="sm"
                             onClick={() => openGRNDialog(po)}
                             className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -348,13 +479,21 @@ export const ProcurementPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <TablePagination
+            currentPage={poPage}
+            totalPages={totalPoPages}
+            totalItems={totalPoItems}
+            pageSize={poPageSize}
+            onPageChange={setPoPage}
+            onPageSizeChange={setPoPageSize}
+          />
         </CardContent>
       </Card>
 
       {/* Raise PO Modal */}
       {showPOModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Raise New Purchase Order
@@ -388,13 +527,22 @@ export const ProcurementPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold mb-1">Approved Supplier</label>
-                <Input
+                <label className="block font-semibold mb-1">Approved Supplier / Vendor *</label>
+                <select
                   value={newPOSupplier}
                   onChange={(e) => setNewPOSupplier(e.target.value)}
                   required
-                  className="h-9"
-                />
+                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                >
+                  {allSuppliers.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                  {allSuppliers.length === 0 && (
+                    <option value="Lumileds India Components">Lumileds India Components</option>
+                  )}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -424,12 +572,10 @@ export const ProcurementPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1">Expected Delivery Date (ETA)</label>
-                <Input
-                  type="date"
-                  required
+                <DatePicker
                   value={newPODelivery}
-                  onChange={(e) => setNewPODelivery(e.target.value)}
-                  className="h-9"
+                  onChange={setNewPODelivery}
+                  placeholder="Select delivery ETA"
                 />
               </div>
 
@@ -448,114 +594,248 @@ export const ProcurementPage: React.FC = () => {
 
       {/* GRN Receipt Modal */}
       {showGRNModal && selectedPO && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   Goods Receipt Note (GRN) Inspection
                 </h2>
                 <p className="text-[11px] text-slate-500">
                   Receiving against PO #{selectedPO.poNumber} &bull; {selectedPO.materialName}
                 </p>
               </div>
-              <button onClick={() => setShowGRNModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowGRNModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
                 &times;
               </button>
             </div>
 
-            <form onSubmit={handleProcessGRN} className="space-y-4 text-xs">
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border space-y-2">
-                <div className="flex justify-between items-center flex-wrap gap-2">
-                  <div>
-                    <div className="text-slate-500 text-[10px]">Ordered Qty</div>
-                    <div className="text-base font-bold text-slate-800 dark:text-slate-200">{selectedPO.orderedQty} units</div>
+            <form onSubmit={handleProcessGRN} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border space-y-2">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
+                    <div>
+                      <div className="text-slate-500 text-[10px]">Ordered Qty</div>
+                      <div className="text-base font-bold text-slate-800 dark:text-slate-200">{selectedPO.orderedQty} units</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-500 text-[10px]">Already Received</div>
+                      <div className="text-base font-bold text-emerald-600">{selectedPO.receivedQty} units</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-500 text-[10px]">Pending Inbound</div>
+                      <div className="text-base font-bold text-blue-600">{selectedPO.pendingQty} units</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-500 text-[10px]">Supplier</div>
+                      <div className="font-semibold text-slate-800 dark:text-slate-200">{selectedPO.supplier}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-slate-500 text-[10px]">Already Received</div>
-                    <div className="text-base font-bold text-emerald-600">{selectedPO.receivedQty} units</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-500 text-[10px]">Pending Inbound</div>
-                    <div className="text-base font-bold text-blue-600">{selectedPO.pendingQty} units</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-500 text-[10px]">Supplier</div>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200">{selectedPO.supplier}</div>
+                  <div className="text-[10px] text-amber-600 font-medium bg-amber-50 dark:bg-amber-950/30 rounded p-1.5">
+                    ℹ️ Accepting less than {selectedPO.pendingQty} units will mark this PO as <strong>Partially Received</strong>. You can raise another GRN later or manually close it.
                   </div>
                 </div>
-                <div className="text-[10px] text-amber-600 font-medium bg-amber-50 dark:bg-amber-950/30 rounded p-1.5">
-                  ℹ️ Accepting less than {selectedPO.pendingQty} units will mark this PO as <strong>Partially Received</strong>. You can raise another GRN later or manually close it.
-                </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-emerald-600">Accepted Qty</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={selectedPO.pendingQty}
+                      required
+                      value={grnAccepted}
+                      onChange={(e) => setGrnAccepted(Number(e.target.value))}
+                      className="h-9 font-bold text-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-red-500">Rejected Qty</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={grnRejected}
+                      onChange={(e) => setGrnRejected(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-amber-500">Damaged Qty</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={grnDamaged}
+                      onChange={(e) => setGrnDamaged(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block font-semibold mb-1 text-emerald-600">Accepted Qty</label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={selectedPO.pendingQty}
+                  <label className="block font-semibold mb-1">Quality Inspection Officer / Store Manager *</label>
+                  <select
+                    value={grnInspector}
+                    onChange={(e) => setGrnInspector(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                     required
-                    value={grnAccepted}
-                    onChange={(e) => setGrnAccepted(Number(e.target.value))}
-                    className="h-9 font-bold text-emerald-600"
-                  />
+                  >
+                    {authorizedEmployees.map((emp) => (
+                      <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                        {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                      </option>
+                    ))}
+                    {authorizedEmployees.length === 0 && (
+                      <option value="Store Manager">Store Manager</option>
+                    )}
+                  </select>
                 </div>
+
                 <div>
-                  <label className="block font-semibold mb-1 text-red-500">Rejected Qty</label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={grnRejected}
-                    onChange={(e) => setGrnRejected(Number(e.target.value))}
-                    className="h-9"
-                  />
+                  <label className="block font-semibold mb-1">Destination Warehouse</label>
+                  <select
+                    value={grnWarehouse}
+                    onChange={(e) => setGrnWarehouse(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                  >
+                    {dynamicWarehouses.map((wh) => (
+                      <option key={wh} value={wh}>
+                        {wh}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <div>
-                  <label className="block font-semibold mb-1 text-amber-500">Damaged Qty</label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={grnDamaged}
-                    onChange={(e) => setGrnDamaged(Number(e.target.value))}
-                    className="h-9"
+                  <label className="block font-semibold mb-1">Inspection Notes & QA Remarks</label>
+                  <textarea
+                    rows={2}
+                    value={grnNotes}
+                    onChange={(e) => setGrnNotes(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    placeholder="e.g. Visual inspection passed, multimeter voltage test verified within spec"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block font-semibold mb-1">Destination Warehouse</label>
-                <select
-                  value={grnWarehouse}
-                  onChange={(e) => setGrnWarehouse(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                >
-                  {dynamicWarehouses.map((wh) => (
-                    <option key={wh} value={wh}>
-                      {wh}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold mb-1">Inspection Notes & QA Remarks</label>
-                <textarea
-                  rows={2}
-                  value={grnNotes}
-                  onChange={(e) => setGrnNotes(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                  placeholder="e.g. Visual inspection passed, multimeter voltage test verified within spec"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowGRNModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
                   Confirm GRN & Update Stock
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit PO Modal */}
+      {showEditPOModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-blue-600" />
+                Edit Purchase Order
+              </h2>
+              <button onClick={() => setShowEditPOModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditPO} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Ordered Quantity</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      required
+                      value={editPOOrderedQty}
+                      onChange={(e) => setEditPOOrderedQty(Number(e.target.value))}
+                      className="h-9 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Negotiated Rate (₹)</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={editPOUnitPrice}
+                      onChange={(e) => setEditPOUnitPrice(Number(e.target.value))}
+                      className="h-9 font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Expected Delivery ETA</label>
+                    <DatePicker
+                      value={editPOExpectedDate}
+                      onChange={setEditPOExpectedDate}
+                      placeholder="Select delivery ETA"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Order Status</label>
+                    <select
+                      value={editPOStatus}
+                      onChange={(e) => setEditPOStatus(e.target.value as any)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    >
+                      <option value="Ordered">Ordered (Pending Dispatch)</option>
+                      <option value="In Transit">In Transit</option>
+                      <option value="Partially Received">Partially Received</option>
+                      <option value="Delayed">Delayed</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Logistics / Transporter</label>
+                    <Input
+                      placeholder="e.g. V-Trans Express"
+                      value={editPOTransporter}
+                      onChange={(e) => setEditPOTransporter(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">LR / Tracking Number</label>
+                    <Input
+                      placeholder="e.g. LR-981240"
+                      value={editPOTracking}
+                      onChange={(e) => setEditPOTracking(e.target.value)}
+                      className="h-9 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold mb-1">Procurement Notes / Terms</label>
+                  <textarea
+                    rows={2}
+                    value={editPONotes}
+                    onChange={(e) => setEditPONotes(e.target.value)}
+                    placeholder="Special delivery instructions, GST compliance notes..."
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowEditPOModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  Save Changes
                 </Button>
               </div>
             </form>

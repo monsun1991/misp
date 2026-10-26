@@ -32,7 +32,8 @@ import {
   Copy,
   Plus,
   Sparkles,
-  RotateCcw
+  RotateCcw,
+  Edit2
 } from 'lucide-react';
 import {
   useMipsStore,
@@ -46,6 +47,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TablePagination, usePagination } from '@/components/common/TablePagination';
 
 export const OrdersDispatchPage: React.FC = () => {
   const {
@@ -54,16 +64,24 @@ export const OrdersDispatchPage: React.FC = () => {
     finishedGoods: rawFinishedGoods,
     customers,
     products,
+    employees,
     selectedPlant,
     createCustomerPO,
+    updateCustomerPO,
     dispatchCustomerPO,
     closeCustomerPO,
-    addCustomer
+    addCustomer,
+    updateCustomer
   } = useMipsStore();
 
   const customerPOs = (rawCustomerPOs || []).filter((po) => isPlantMatch(po.plant, selectedPlant));
   const dispatchRecords = (rawDispatchRecords || []).filter((d) => isPlantMatch(d.plant, selectedPlant));
   const finishedGoods = (rawFinishedGoods || []).filter((fg) => isPlantMatch(fg.plant, selectedPlant));
+
+  const authorizedEmployees = useMemo(() => {
+    const plantEmps = (employees || []).filter((e) => isPlantMatch(e.plant, selectedPlant));
+    return plantEmps.length > 0 ? plantEmps : (employees || []);
+  }, [employees, selectedPlant]);
 
   const fgsStockByProductId = useMemo(() => {
     const map: Record<string, number> = {};
@@ -76,6 +94,14 @@ export const OrdersDispatchPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'orders' | 'dispatches' | 'customers'>('orders');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [wattageFilter, setWattageFilter] = useState<string>('All');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
+  // Dispatches search and date filter
+  const [dispatchSearch, setDispatchSearch] = useState<string>('');
+  const [dispatchStartDate, setDispatchStartDate] = useState<string>('');
+  const [dispatchEndDate, setDispatchEndDate] = useState<string>('');
 
   // Page View Mode: 'list' or 'create_po' (dedicated full-page form)
   const [viewMode, setViewMode] = useState<'list' | 'create_po'>('list');
@@ -86,6 +112,77 @@ export const OrdersDispatchPage: React.FC = () => {
   const [showChallanModal, setShowChallanModal] = useState(false);
   const [activeDispatchChallan, setActiveDispatchChallan] = useState<OutwardDispatchRecord | null>(null);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+
+  // Edit Customer PO state
+  const [showEditOrderModal, setShowEditOrderModal] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState('');
+  const [editOrderETA, setEditOrderETA] = useState('');
+  const [editOrderBillingCity, setEditOrderBillingCity] = useState('');
+  const [editOrderNotes, setEditOrderNotes] = useState('');
+  const [editOrderStatus, setEditOrderStatus] = useState<CustomerPO['status']>('New Order');
+
+  const handleOpenEditOrder = (po: CustomerPO) => {
+    setEditingOrderId(po.id);
+    setEditOrderETA(po.expectedDispatchDate);
+    setEditOrderBillingCity(po.billingCity || '');
+    setEditOrderNotes(po.notes || '');
+    setEditOrderStatus(po.status);
+    setShowEditOrderModal(true);
+  };
+
+  const handleSaveEditOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateCustomerPO(editingOrderId, {
+      expectedDispatchDate: editOrderETA,
+      billingCity: editOrderBillingCity,
+      notes: editOrderNotes,
+      status: editOrderStatus,
+    });
+    setShowEditOrderModal(false);
+  };
+
+  // Edit Customer state
+  const [showEditCustModal, setShowEditCustModal] = useState(false);
+  const [editingCustId, setEditingCustId] = useState('');
+  const [editCustName, setEditCustName] = useState('');
+  const [editCustCat, setEditCustCat] = useState<Customer['category']>('B2B Brand OEM');
+  const [editCustGstin, setEditCustGstin] = useState('');
+  const [editCustCity, setEditCustCity] = useState('');
+  const [editCustState, setEditCustState] = useState('');
+  const [editCustContact, setEditCustContact] = useState('');
+  const [editCustPhone, setEditCustPhone] = useState('');
+  const [editCustEmail, setEditCustEmail] = useState('');
+  const [editCustPayment, setEditCustPayment] = useState('30 Days PDC');
+
+  const handleOpenEditCust = (c: Customer) => {
+    setEditingCustId(c.id);
+    setEditCustName(c.name);
+    setEditCustCat(c.category);
+    setEditCustGstin(c.gstin);
+    setEditCustCity(c.city);
+    setEditCustState(c.state);
+    setEditCustContact(c.contactPerson);
+    setEditCustPhone(c.phone);
+    setEditCustEmail(c.email);
+    setEditCustPayment(c.paymentTerms);
+    setShowEditCustModal(true);
+  };
+
+  const handleSaveEditCust = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateCustomer(editingCustId, {
+      name: editCustName,
+      category: editCustCat,
+      gstin: editCustGstin,
+      city: editCustCity,
+      state: editCustState,
+      contactPerson: editCustContact,
+      phone: editCustPhone,
+      email: editCustEmail,
+      paymentTerms: editCustPayment,
+    });
+    setShowEditCustModal(false);
+  };
 
   // New Customer PO Form State
   const initialCustomer = customers[0] || {
@@ -163,18 +260,93 @@ export const OrdersDispatchPage: React.FC = () => {
   };
 
   // Filtered Customer POs
-  const filteredOrders = customerPOs.filter((po) => {
-    const q = searchTerm.toLowerCase();
-    const matchesSearch =
-      !q ||
-      po.customerPoNumber.toLowerCase().includes(q) ||
-      po.customerName.toLowerCase().includes(q) ||
-      po.billingCity.toLowerCase().includes(q) ||
-      po.items.some((i) => i.productName.toLowerCase().includes(q) || i.productCode.toLowerCase().includes(q));
+  const filteredOrders = React.useMemo(() => {
+    return customerPOs.filter((po) => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        !q ||
+        po.customerPoNumber.toLowerCase().includes(q) ||
+        po.customerName.toLowerCase().includes(q) ||
+        po.billingCity.toLowerCase().includes(q) ||
+        po.items.some((i) => i.productName.toLowerCase().includes(q) || i.productCode.toLowerCase().includes(q));
 
-    const matchesStatus = statusFilter === 'All' || po.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+      const matchesStatus = statusFilter === 'All' || po.status === statusFilter;
+
+      const matchesWattage =
+        wattageFilter === 'All' ||
+        po.items.some((item) => {
+          const prod = products.find((p) => p.id === item.productId || p.code === item.productCode);
+          return prod?.wattage === wattageFilter;
+        });
+
+      const poDate = po.poDate ? po.poDate.split('T')[0] : '';
+      const matchesDate =
+        (!startDate || poDate >= startDate) &&
+        (!endDate || poDate <= endDate);
+
+      return matchesSearch && matchesStatus && matchesWattage && matchesDate;
+    });
+  }, [customerPOs, products, searchTerm, statusFilter, wattageFilter, startDate, endDate]);
+
+  // Filtered Outward Dispatches
+  const filteredDispatches = React.useMemo(() => {
+    return dispatchRecords.filter((dc) => {
+      const q = dispatchSearch.toLowerCase();
+      const matchesSearch =
+        !q ||
+        dc.dispatchNo.toLowerCase().includes(q) ||
+        dc.customerName.toLowerCase().includes(q) ||
+        dc.customerPoNumber.toLowerCase().includes(q) ||
+        dc.transporter.toLowerCase().includes(q) ||
+        dc.vehicleNo.toLowerCase().includes(q) ||
+        dc.ewayBillNo.toLowerCase().includes(q);
+
+      const dcDate = dc.dispatchDate ? dc.dispatchDate.split('T')[0] : '';
+      const matchesDate =
+        (!dispatchStartDate || dcDate >= dispatchStartDate) &&
+        (!dispatchEndDate || dcDate <= dispatchEndDate);
+
+      return matchesSearch && matchesDate;
+    });
+  }, [dispatchRecords, dispatchSearch, dispatchStartDate, dispatchEndDate]);
+
+  const {
+    currentPage: ordersPage,
+    setCurrentPage: setOrdersPage,
+    pageSize: ordersPageSize,
+    setPageSize: setOrdersPageSize,
+    totalItems: totalOrderItems,
+    totalPages: totalOrderPages,
+    paginatedItems: paginatedOrders,
+  } = usePagination(filteredOrders, 10);
+
+  const {
+    currentPage: dcPage,
+    setCurrentPage: setDcPage,
+    pageSize: dcPageSize,
+    setPageSize: setDcPageSize,
+    totalItems: totalDcItems,
+    totalPages: totalDcPages,
+    paginatedItems: paginatedDispatches,
+  } = usePagination(filteredDispatches, 10);
+
+  React.useEffect(() => {
+    setOrdersPage(1);
+  }, [searchTerm, statusFilter, wattageFilter, startDate, endDate]);
+
+  React.useEffect(() => {
+    setDcPage(1);
+  }, [dispatchSearch, dispatchStartDate, dispatchEndDate]);
+
+  const {
+    currentPage: custPage,
+    setCurrentPage: setCustPage,
+    pageSize: custPageSize,
+    setPageSize: setCustPageSize,
+    totalItems: totalCustItems,
+    totalPages: totalCustPages,
+    paginatedItems: paginatedCusts,
+  } = usePagination(customers, 10);
 
   // Calculate Metrics
   const totalOpenOrders = customerPOs.filter((p) => p.status !== 'Closed' && p.status !== 'Fully Dispatched').length;
@@ -537,12 +709,10 @@ export const OrdersDispatchPage: React.FC = () => {
                     <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                       PO Issue Date *
                     </label>
-                    <Input
-                      type="date"
-                      required
+                    <DatePicker
                       value={newPoDate}
-                      onChange={(e) => setNewPoDate(e.target.value)}
-                      className="h-9"
+                      onChange={setNewPoDate}
+                      placeholder="Select PO date"
                     />
                   </div>
 
@@ -550,12 +720,10 @@ export const OrdersDispatchPage: React.FC = () => {
                     <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                       Delivery Due Date (ETA) *
                     </label>
-                    <Input
-                      type="date"
-                      required
+                    <DatePicker
                       value={newDeliveryDate}
-                      onChange={(e) => setNewDeliveryDate(e.target.value)}
-                      className="h-9"
+                      onChange={setNewDeliveryDate}
+                      placeholder="Select delivery ETA"
                     />
                   </div>
                 </div>
@@ -1078,19 +1246,64 @@ export const OrdersDispatchPage: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-8 text-xs bg-slate-50 dark:bg-slate-800 border rounded-md px-2"
-                >
-                  <option value="All">All Order Statuses</option>
-                  <option value="New Order">New Order</option>
-                  <option value="In Production">In Production</option>
-                  <option value="Partially Dispatched">Partially Dispatched</option>
-                  <option value="Fully Dispatched">Fully Dispatched</option>
-                  <option value="Closed">Closed</option>
-                </select>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={statusFilter} onValueChange={(val: any) => setStatusFilter(val)}>
+                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                    <SelectValue placeholder="All Order Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Order Statuses</SelectItem>
+                    <SelectItem value="New Order">New Order</SelectItem>
+                    <SelectItem value="In Production">In Production</SelectItem>
+                    <SelectItem value="Partially Dispatched">Partially Dispatched</SelectItem>
+                    <SelectItem value="Fully Dispatched">Fully Dispatched</SelectItem>
+                    <SelectItem value="Closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={wattageFilter} onValueChange={setWattageFilter}>
+                  <SelectTrigger className="w-[125px] h-8 text-xs">
+                    <SelectValue placeholder="All Wattages" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Wattages</SelectItem>
+                    <SelectItem value="5W">5W</SelectItem>
+                    <SelectItem value="9W">9W</SelectItem>
+                    <SelectItem value="12W">12W</SelectItem>
+                    <SelectItem value="15W">15W</SelectItem>
+                    <SelectItem value="20W">20W</SelectItem>
+                    <SelectItem value="50W">50W</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="flex items-center gap-1.5 text-xs">
+                  <DatePicker
+                    value={startDate}
+                    onChange={setStartDate}
+                    placeholder="Start date"
+                    className="w-32"
+                  />
+                  <span className="text-slate-400 text-[10px]">to</span>
+                  <DatePicker
+                    value={endDate}
+                    onChange={setEndDate}
+                    placeholder="End date"
+                    className="w-32"
+                  />
+                  {(startDate || endDate) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStartDate('');
+                        setEndDate('');
+                      }}
+                      className="h-8 px-2 text-xs text-rose-500 hover:text-rose-700"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -1112,7 +1325,7 @@ export const OrdersDispatchPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredOrders.map((po) => (
+                  {paginatedOrders.map((po) => (
                     <tr key={po.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                       <td className="py-3 px-3">
                         <div className="font-mono font-bold text-blue-600 dark:text-blue-400">{po.customerPoNumber}</div>
@@ -1189,6 +1402,16 @@ export const OrdersDispatchPage: React.FC = () => {
                         {po.status !== 'Fully Dispatched' && po.status !== 'Closed' ? (
                           <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEditOrder(po)}
+                              className="h-7 text-xs border-slate-200 text-slate-700 hover:bg-slate-100 font-medium"
+                              title="Edit Order ETA & Delivery Info"
+                            >
+                              <Edit2 className="w-3 h-3 mr-1 text-slate-500" />
+                              Edit
+                            </Button>
+                            <Button
                               size="sm"
                               onClick={() => openDispatchDialog(po)}
                               className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
@@ -1223,6 +1446,14 @@ export const OrdersDispatchPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              currentPage={ordersPage}
+              totalPages={totalOrderPages}
+              totalItems={totalOrderItems}
+              pageSize={ordersPageSize}
+              onPageChange={setOrdersPage}
+              onPageSizeChange={setOrdersPageSize}
+            />
           </CardContent>
         </Card>
       )}
@@ -1231,13 +1462,58 @@ export const OrdersDispatchPage: React.FC = () => {
       {activeTab === 'dispatches' && (
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Truck className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
-              Outward Delivery Challans (DC) & Factory Gate Dispatches
-            </CardTitle>
-            <CardDescription>
-              Chronological log of all finished goods vehicles dispatched from {selectedPlant} with E-Way Bill references.
-            </CardDescription>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
+                  Outward Delivery Challans (DC) & Factory Gate Dispatches
+                </CardTitle>
+                <CardDescription>
+                  Chronological log of all finished goods vehicles dispatched from {selectedPlant} with E-Way Bill references.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 max-w-xs">
+                  <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <Input
+                    placeholder="Search DC#, client, truck, eway..."
+                    value={dispatchSearch}
+                    onChange={(e) => setDispatchSearch(e.target.value)}
+                    className="h-8 text-xs w-44"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs">
+                  <DatePicker
+                    value={dispatchStartDate}
+                    onChange={setDispatchStartDate}
+                    placeholder="Start date"
+                    className="w-32"
+                  />
+                  <span className="text-slate-400 text-[10px]">to</span>
+                  <DatePicker
+                    value={dispatchEndDate}
+                    onChange={setDispatchEndDate}
+                    placeholder="End date"
+                    className="w-32"
+                  />
+                  {(dispatchStartDate || dispatchEndDate) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDispatchStartDate('');
+                        setDispatchEndDate('');
+                      }}
+                      className="h-8 px-2 text-xs text-rose-500 hover:text-rose-700"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -1257,7 +1533,7 @@ export const OrdersDispatchPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {dispatchRecords.map((dc) => (
+                  {paginatedDispatches.map((dc) => (
                     <tr key={dc.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                       <td className="py-3 px-3 font-mono font-bold text-[#146b68] dark:text-[#84cc16]">
                         {dc.dispatchNo}
@@ -1295,16 +1571,24 @@ export const OrdersDispatchPage: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                  {dispatchRecords.length === 0 && (
+                  {filteredDispatches.length === 0 && (
                     <tr>
                       <td colSpan={10} className="py-8 text-center text-slate-400">
-                        No outward dispatches recorded yet for {selectedPlant}.
+                        No outward dispatches found matching your criteria.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              currentPage={dcPage}
+              totalPages={totalDcPages}
+              totalItems={totalDcItems}
+              pageSize={dcPageSize}
+              onPageChange={setDcPage}
+              onPageSizeChange={setDcPageSize}
+            />
           </CardContent>
         </Card>
       )}
@@ -1342,10 +1626,11 @@ export const OrdersDispatchPage: React.FC = () => {
                     <th className="py-2.5 px-3">Contact Person & Phone</th>
                     <th className="py-2.5 px-3">Commercial Terms</th>
                     <th className="py-2.5 px-3 text-right">Orders Placed</th>
+                    <th className="py-2.5 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {customers.map((c) => {
+                  {paginatedCusts.map((c) => {
                     const orderCount = customerPOs.filter(
                       (p) => p.customerName.toLowerCase() === c.name.toLowerCase()
                     ).length;
@@ -1397,12 +1682,32 @@ export const OrdersDispatchPage: React.FC = () => {
                             {orderCount} Orders
                           </Badge>
                         </td>
+                        <td className="py-3 px-3 text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenEditCust(c)}
+                            className="h-7 text-xs border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-950/40 gap-1 font-medium"
+                            title="Edit Buyer Details"
+                          >
+                            <Edit2 className="w-3 h-3 text-blue-600" />
+                            Edit
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              currentPage={custPage}
+              totalPages={totalCustPages}
+              totalItems={totalCustItems}
+              pageSize={custPageSize}
+              onPageChange={setCustPage}
+              onPageSizeChange={setCustPageSize}
+            />
           </CardContent>
         </Card>
       )}
@@ -1410,9 +1715,9 @@ export const OrdersDispatchPage: React.FC = () => {
 
       {/* MODAL 2: Outward Dispatch & Delivery Challan */}
       {showDispatchModal && selectedPOForDispatch && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <Truck className="w-4 h-4 text-emerald-600" />
@@ -1427,7 +1732,8 @@ export const OrdersDispatchPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleProcessDispatch} className="space-y-4 text-xs">
+            <form onSubmit={handleProcessDispatch} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
               {/* Product Dispatch Quantity Inputs */}
               <div className="space-y-2">
                 <label className="font-semibold text-slate-800 dark:text-slate-200 block">
@@ -1494,13 +1800,20 @@ export const OrdersDispatchPage: React.FC = () => {
                     <label className="block font-semibold mb-1 text-slate-600 dark:text-slate-400">
                       Transporter / Freight Carrier *
                     </label>
-                    <Input
-                      required
+                    <select
                       value={dispatchTransporter}
                       onChange={(e) => setDispatchTransporter(e.target.value)}
-                      className="h-8"
-                      placeholder="e.g. V-Trans Logistics India"
-                    />
+                      className="w-full h-8 bg-white dark:bg-slate-900 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                      required
+                    >
+                      <option value="V-Trans Logistics India">V-Trans Logistics India</option>
+                      <option value="TCI Express Ltd.">TCI Express Ltd.</option>
+                      <option value="Safexpress Logistics Pvt. Ltd.">Safexpress Logistics Pvt. Ltd.</option>
+                      <option value="GATI KWE Surface Express">GATI KWE Surface Express</option>
+                      <option value="Blue Dart Express Ltd.">Blue Dart Express Ltd.</option>
+                      <option value="Delhivery Freight">Delhivery Freight</option>
+                      <option value="Self-Pickup / Customer Dedicated Vehicle">Self-Pickup / Customer Dedicated Vehicle</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-slate-600 dark:text-slate-400">
@@ -1533,12 +1846,25 @@ export const OrdersDispatchPage: React.FC = () => {
                     <label className="block font-semibold mb-1 text-slate-600 dark:text-slate-400">
                       Dispatch Incharge / Prepared By *
                     </label>
-                    <Input
-                      required
+                    <select
                       value={dispatchOfficer}
                       onChange={(e) => setDispatchOfficer(e.target.value)}
-                      className="h-8"
-                    />
+                      className="w-full h-8 bg-white dark:bg-slate-900 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                      required
+                    >
+                      {authorizedEmployees.map((emp) => (
+                        <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                        </option>
+                      ))}
+                      {authorizedEmployees.length === 0 && (
+                        <>
+                          <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
+                          <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
+                          <option value="System Super Admin">System Super Admin</option>
+                        </>
+                      )}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -1556,24 +1882,25 @@ export const OrdersDispatchPage: React.FC = () => {
                   <strong>Mark PO as Closed after this dispatch</strong> (Use if customer accepted short delivery as final)
                 </label>
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t">
-                <Button type="button" variant="outline" size="sm" onClick={() => setShowDispatchModal(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
-                  Generate Delivery Challan & Dispatch
-                </Button>
-              </div>
-            </form>
-          </div>
+            <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowDispatchModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                Generate Delivery Challan & Dispatch
+              </Button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* MODAL 3: Printable Delivery Challan Preview */}
       {showChallanModal && activeDispatchChallan && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
                 <Printer className="w-5 h-5 text-[#146b68] dark:text-[#84cc16]" />
@@ -1665,8 +1992,8 @@ export const OrdersDispatchPage: React.FC = () => {
 
       {/* MODAL 4: Add New Registered Customer / Buyer */}
       {showAddCustomerModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -1773,13 +2100,21 @@ export const OrdersDispatchPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold mb-1">Payment & Commercial Terms</label>
-                <Input
+                <label className="block font-semibold mb-1">Payment & Commercial Terms *</label>
+                <select
                   value={newClientTerms}
                   onChange={(e) => setNewClientTerms(e.target.value)}
-                  placeholder="e.g. 30 Days Net from Delivery Challan"
-                  className="h-8"
-                />
+                  className="w-full h-8 bg-white dark:bg-slate-900 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  required
+                >
+                  <option value="30 Days Net from Delivery Challan">30 Days Net from Delivery Challan</option>
+                  <option value="Immediate / 100% Advance against PI">Immediate / 100% Advance against PI</option>
+                  <option value="50% Advance, 50% against Delivery Challan">50% Advance, 50% against Delivery Challan</option>
+                  <option value="45 Days Credit from Invoice Date">45 Days Credit from Invoice Date</option>
+                  <option value="60 Days Credit from Invoice Date">60 Days Credit from Invoice Date</option>
+                  <option value="Letter of Credit (LC at Sight)">Letter of Credit (LC at Sight)</option>
+                  <option value="Cash on Delivery (COD)">Cash on Delivery (COD)</option>
+                </select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t">
@@ -1788,6 +2123,214 @@ export const OrdersDispatchPage: React.FC = () => {
                 </Button>
                 <Button type="submit" size="sm" className="bg-[#183638] text-[#84cc16] hover:bg-[#122b2d] font-bold">
                   Save Buyer Profile
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer PO Modal */}
+      {showEditOrderModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-blue-600" />
+                Edit Customer Order
+              </h2>
+              <button onClick={() => setShowEditOrderModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditOrder} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Expected Delivery ETA</label>
+                    <DatePicker
+                      value={editOrderETA}
+                      onChange={setEditOrderETA}
+                      placeholder="Select delivery ETA"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Order Status</label>
+                    <select
+                      value={editOrderStatus}
+                      onChange={(e) => setEditOrderStatus(e.target.value as any)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    >
+                      <option value="New Order">New Order</option>
+                      <option value="In Production">In Production</option>
+                      <option value="Partially Dispatched">Partially Dispatched</option>
+                      <option value="Fully Dispatched">Fully Dispatched</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold mb-1">Delivery Destination / City</label>
+                  <Input
+                    value={editOrderBillingCity}
+                    onChange={(e) => setEditOrderBillingCity(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold mb-1">Order Notes / Terms</label>
+                  <textarea
+                    rows={2}
+                    value={editOrderNotes}
+                    onChange={(e) => setEditOrderNotes(e.target.value)}
+                    placeholder="Special dispatch instructions, consignee details..."
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowEditOrderModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer Modal */}
+      {showEditCustModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-blue-600" />
+                Edit Registered Buyer
+              </h2>
+              <button onClick={() => setShowEditCustModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditCust} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Company Name</label>
+                  <Input
+                    required
+                    value={editCustName}
+                    onChange={(e) => setEditCustName(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Category</label>
+                  <select
+                    value={editCustCat}
+                    onChange={(e) => setEditCustCat(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                  >
+                    <option value="B2B Brand OEM">B2B Brand OEM</option>
+                    <option value="Regional Distributor">Regional Distributor</option>
+                    <option value="Wholesale Trader">Wholesale Trader</option>
+                    <option value="Direct Institutional">Direct Institutional</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">GSTIN / Tax ID</label>
+                  <Input
+                    required
+                    value={editCustGstin}
+                    onChange={(e) => setEditCustGstin(e.target.value)}
+                    className="h-9 font-mono uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Payment / Commercial Terms</label>
+                  <select
+                    value={editCustPayment}
+                    onChange={(e) => setEditCustPayment(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                  >
+                    <option value="30 Days Net from Delivery Challan">30 Days Net from Delivery Challan</option>
+                    <option value="Immediate / 100% Advance against PI">Immediate / 100% Advance against PI</option>
+                    <option value="50% Advance, 50% against Delivery Challan">50% Advance, 50% against Delivery Challan</option>
+                    <option value="45 Days Credit from Invoice Date">45 Days Credit from Invoice Date</option>
+                    <option value="60 Days Credit from Invoice Date">60 Days Credit from Invoice Date</option>
+                    <option value="Letter of Credit (LC at Sight)">Letter of Credit (LC at Sight)</option>
+                    <option value="Cash on Delivery (COD)">Cash on Delivery (COD)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Billing City</label>
+                  <Input
+                    required
+                    value={editCustCity}
+                    onChange={(e) => setEditCustCity(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">State</label>
+                  <Input
+                    required
+                    value={editCustState}
+                    onChange={(e) => setEditCustState(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Contact Person</label>
+                  <Input
+                    required
+                    value={editCustContact}
+                    onChange={(e) => setEditCustContact(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Phone Number</label>
+                  <Input
+                    required
+                    value={editCustPhone}
+                    onChange={(e) => setEditCustPhone(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Email</label>
+                  <Input
+                    type="email"
+                    required
+                    value={editCustEmail}
+                    onChange={(e) => setEditCustEmail(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowEditCustModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  Save Changes
                 </Button>
               </div>
             </form>

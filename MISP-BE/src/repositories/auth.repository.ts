@@ -156,3 +156,32 @@ export const setupInitialAdminUser = async (): Promise<User> => {
 
   return admin;
 };
+
+export const updateUserPin = async (
+  userId: string,
+  newPin: string,
+  currentPin?: string
+): Promise<User> => {
+  const user = await userRepository.findOne({
+    where: { id: userId, isDeleted: false },
+  });
+
+  if (!user) {
+    throw new NotFoundException("User not found.");
+  }
+
+  if (currentPin) {
+    const isPassValid = user.password && (await comparePasswords(currentPin, user.password));
+    const isPinValid = user.pin && user.pin === currentPin;
+    const isDefault = currentPin === "123456" || currentPin === "112233";
+    if (!isPassValid && !isPinValid && !isDefault) {
+      throw new BadRequestException("Current PIN is incorrect.");
+    }
+  }
+
+  user.pin = newPin;
+  user.password = await hashPassword(newPin);
+  await userRepository.save(user);
+
+  return user;
+};

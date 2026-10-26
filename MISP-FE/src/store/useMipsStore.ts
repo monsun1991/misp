@@ -88,11 +88,15 @@ export interface PurchaseOrder {
   receivedQty: number;
   pendingQty: number;
   unitRate: number;
+  unitPrice?: number;
   expectedDeliveryDate: string;
   status: 'Draft' | 'Ordered' | 'In Transit' | 'Received' | 'Partially Received' | 'Delayed' | 'Closed';
   transporter?: string;
   trackingNo?: string;
+  trackingNumber?: string;
   dispatchDate?: string;
+  notes?: string;
+  totalAmount?: number;
   plant?: string;
 }
 
@@ -181,10 +185,12 @@ export interface KitItem {
   materialName: string;
   bomQtyPerUnit: number;
   totalIssuedQty: number;
+  issuedQty?: number;
   consumedQty: number;
   returnedQty: number;
   wastageQty: number;
   balanceWithEmployee: number;
+  uom?: string;
 }
 
 export interface ProductionKit {
@@ -377,7 +383,11 @@ export function getEffectivePermissions(employee: Partial<Employee> | undefined,
   if (!employee) {
     return { effective: [], fromRole: [], ubacGrants: [], ubacRevoked: [] };
   }
-  const roleObj = roles.find((r) => r.name === employee.role);
+  const normEmpRole = (employee.role || '').toLowerCase().replace(/[\s/_-]+/g, '');
+  const roleObj = roles.find((r) => {
+    const normR = r.name.toLowerCase().replace(/[\s/_-]+/g, '');
+    return normR === normEmpRole || r.name.toLowerCase() === (employee.role || '').toLowerCase();
+  });
   const fromRole = roleObj?.permissions || [];
   const ubacGrants = employee.customPermissions || [];
   const ubacRevoked = employee.revokedPermissions || [];
@@ -437,6 +447,10 @@ interface MipsState {
   // Actions
   addMaterial: (material: Omit<Material, 'id'>) => void;
   updateMaterial: (id: string, updates: Partial<Material>) => void;
+  deleteMaterial: (id: string) => void;
+  addProduct: (product: Omit<Product, 'id'>) => void;
+  updateProduct: (id: string, updates: Partial<Product>) => void;
+  deleteProduct: (id: string) => void;
   adjustStock: (
     materialId: string,
     adjustmentQty: number,
@@ -456,11 +470,13 @@ interface MipsState {
   ) => void;
   
   createPurchaseOrder: (po: Omit<PurchaseOrder, 'id'>) => void;
+  updatePO: (id: string, updates: Partial<PurchaseOrder>) => void;
   updatePOStatus: (id: string, status: PurchaseOrder['status'], notes?: string) => void;
   createGRN: (grn: Omit<GRNEntry, 'id'>, user: string) => void;
 
   // Customer PO & Outbound Dispatch Actions
   createCustomerPO: (po: Omit<CustomerPO, 'id' | 'totalAmount' | 'totalOrderedQty' | 'totalDispatchedQty' | 'totalPendingQty' | 'status'>) => void;
+  updateCustomerPO: (id: string, updates: Partial<CustomerPO>) => void;
   dispatchCustomerPO: (dispatchData: {
     customerPoId: string;
     transporter: string;
@@ -487,6 +503,8 @@ interface MipsState {
   updateFinishedGoodStatus: (id: string, status: FinishedGoodItem['status'], notes?: string, user?: string) => void;
 
   addProductionLog: (log: Omit<ProductionLog, 'id' | 'unitsPerHour' | 'productivityPct'>) => void;
+  updateProductionLog: (id: string, updates: Partial<ProductionLog>) => void;
+  deleteProductionLog: (id: string) => void;
   addAuditLog: (user: string, action: string, module: string, details: string) => void;
   
   // Dynamic Roles, Departments & Onboarding Actions
@@ -1804,11 +1822,14 @@ const DEFAULT_ROLES: Role[] = [
     isSystem: true,
     permissions: [
       'inventory.view', 'inventory.adjust', 'inventory.transfer',
+      'finished_goods.view', 'finished_goods.manage',
       'procurement.po.create', 'procurement.po.approve', 'procurement.grn.receive',
       'forecast.view', 'forecast.plan',
-      'kits.create', 'kits.issue', 'kits.reconcile', 'kits.close',
-      'production.log', 'production.scrap',
-      'masters.manage', 'settings.manage', 'users.manage'
+      'kits.view', 'kits.create', 'kits.issue', 'kits.reconcile', 'kits.close',
+      'production.view', 'production.plan', 'production.log', 'production.scrap',
+      'orders.view', 'orders.manage',
+      'productivity.view',
+      'masters.manage', 'settings.manage', 'users.manage', 'reports.view'
     ]
   },
   {
@@ -1817,53 +1838,105 @@ const DEFAULT_ROLES: Role[] = [
     description: 'Executive overview, KPI dashboards, 4-month inventory forecasts, cost accounting, and labour yield analysis.',
     isSystem: true,
     permissions: [
-      'inventory.view', 'procurement.view', 'forecast.view', 'kits.view', 'production.view', 'productivity.view', 'reports.view'
+      'inventory.view', 'finished_goods.view', 'procurement.view', 'forecast.view', 'kits.view', 'production.view', 'orders.view', 'productivity.view', 'reports.view'
     ]
   },
   {
     id: 'role-003',
+    name: 'Plant Manager',
+    description: 'Facility operations leadership, production target oversight, inter-departmental workflows, and cross-plant approvals.',
+    isSystem: true,
+    permissions: [
+      'inventory.view', 'inventory.adjust', 'inventory.transfer',
+      'finished_goods.view', 'finished_goods.manage',
+      'procurement.view', 'procurement.po.create', 'procurement.po.approve', 'procurement.grn.receive',
+      'forecast.view', 'forecast.plan',
+      'kits.view', 'kits.create', 'kits.issue', 'kits.reconcile', 'kits.close',
+      'production.view', 'production.plan', 'production.log', 'production.scrap',
+      'orders.view', 'orders.manage',
+      'productivity.view', 'reports.view'
+    ]
+  },
+  {
+    id: 'role-004',
+    name: 'Store Manager',
+    description: 'Responsible for raw material warehouses, stock ledger accuracy, GRN physical verification, kit issuance, and stock adjustments.',
+    isSystem: true,
+    permissions: [
+      'inventory.view', 'inventory.adjust', 'inventory.transfer',
+      'finished_goods.view',
+      'procurement.view', 'procurement.grn.receive',
+      'kits.view', 'kits.issue', 'kits.reconcile',
+      'orders.view',
+      'masters.materials.view'
+    ]
+  },
+  {
+    id: 'role-005',
     name: 'Inventory / Store Manager',
     description: 'Responsible for raw material warehouses, stock ledger accuracy, GRN physical verification, kit issuance, and stock adjustments.',
     isSystem: true,
     permissions: [
       'inventory.view', 'inventory.adjust', 'inventory.transfer',
-      'procurement.grn.receive', 'kits.issue', 'kits.reconcile', 'masters.materials.view'
-    ]
-  },
-  {
-    id: 'role-004',
-    name: 'Purchase Manager',
-    description: 'Procurement cycle, vendor management, purchase orders, carrier in-transit tracking, and supplier pricing.',
-    isSystem: true,
-    permissions: [
-      'procurement.po.create', 'procurement.po.approve', 'procurement.view', 'forecast.view', 'masters.suppliers.manage'
-    ]
-  },
-  {
-    id: 'role-005',
-    name: 'Production Manager',
-    description: 'BOM structures, production batch orders, shop floor planning, kit creation, and floor productivity expected output.',
-    isSystem: true,
-    permissions: [
-      'production.plan', 'production.log', 'kits.create', 'kits.view', 'masters.products.manage', 'masters.bom.manage'
+      'finished_goods.view',
+      'procurement.view', 'procurement.grn.receive',
+      'kits.view', 'kits.issue', 'kits.reconcile',
+      'orders.view',
+      'masters.materials.view'
     ]
   },
   {
     id: 'role-006',
-    name: 'Supervisor',
-    description: 'Assembly line leadership, assigned worker oversight, physical kit issuance, progress tracking, and kit reconciliation sign-off.',
+    name: 'Purchase Manager',
+    description: 'Procurement cycle, vendor management, purchase orders, carrier in-transit tracking, and supplier pricing.',
     isSystem: true,
     permissions: [
-      'kits.issue', 'kits.reconcile', 'production.log', 'productivity.view'
+      'inventory.view', 'procurement.po.create', 'procurement.po.approve', 'procurement.view', 'forecast.view', 'orders.view', 'masters.suppliers.manage', 'reports.view'
     ]
   },
   {
     id: 'role-007',
+    name: 'Quality Inspector',
+    description: 'Inbound raw material testing, QA quarantine holding, photometric lab test records, and assembly rejection scrap log.',
+    isSystem: true,
+    permissions: [
+      'inventory.view', 'finished_goods.view', 'procurement.view', 'procurement.grn.receive', 'kits.view', 'kits.reconcile', 'production.view', 'production.scrap', 'reports.view'
+    ]
+  },
+  {
+    id: 'role-008',
+    name: 'Production Manager',
+    description: 'BOM structures, production batch orders, shop floor planning, kit creation, and floor productivity expected output.',
+    isSystem: true,
+    permissions: [
+      'inventory.view', 'finished_goods.view', 'finished_goods.manage', 'forecast.view', 'kits.view', 'kits.create', 'kits.issue', 'kits.reconcile', 'kits.close', 'production.view', 'production.plan', 'production.log', 'production.scrap', 'productivity.view', 'masters.products.manage', 'masters.bom.manage', 'reports.view'
+    ]
+  },
+  {
+    id: 'role-009',
+    name: 'Floor Supervisor',
+    description: 'Assembly line leadership, assigned worker oversight, physical kit issuance, progress tracking, and kit reconciliation sign-off.',
+    isSystem: true,
+    permissions: [
+      'inventory.view', 'kits.view', 'kits.issue', 'kits.reconcile', 'kits.close', 'production.view', 'production.log', 'production.scrap', 'productivity.view'
+    ]
+  },
+  {
+    id: 'role-010',
+    name: 'Supervisor',
+    description: 'Assembly line leadership, assigned worker oversight, physical kit issuance, progress tracking, and kit reconciliation sign-off.',
+    isSystem: true,
+    permissions: [
+      'inventory.view', 'kits.view', 'kits.issue', 'kits.reconcile', 'kits.close', 'production.view', 'production.log', 'production.scrap', 'productivity.view'
+    ]
+  },
+  {
+    id: 'role-011',
     name: 'Worker',
     description: 'Shop floor assembly operator, component consumption, kit return hand-off, and daily unit count logging.',
     isSystem: true,
     permissions: [
-      'kits.view_assigned', 'production.log_output'
+      'kits.view', 'production.log'
     ]
   }
 ];
@@ -2224,6 +2297,34 @@ export const useMipsStore = create<MipsState>()(
         }));
       },
 
+      deleteMaterial: (id) => {
+        set((state) => ({
+          materials: state.materials.filter((m) => m.id !== id)
+        }));
+      },
+
+      addProduct: (product) => {
+        const newProduct: Product = {
+          ...product,
+          id: `prod-${Date.now()}`
+        };
+        set((state) => ({
+          products: [newProduct, ...state.products]
+        }));
+      },
+
+      updateProduct: (id, updates) => {
+        set((state) => ({
+          products: state.products.map((p) => (p.id === id ? { ...p, ...updates } : p))
+        }));
+      },
+
+      deleteProduct: (id) => {
+        set((state) => ({
+          products: state.products.filter((p) => p.id !== id)
+        }));
+      },
+
       adjustStock: (materialId, adjustmentQty, reason, user, meta) => {
         const material = get().materials.find((m) => m.id === materialId);
         if (!material) return;
@@ -2306,6 +2407,23 @@ export const useMipsStore = create<MipsState>()(
               action: 'PO_CREATED',
               module: 'Procurement',
               details: `Created PO ${po.poNumber} for ${po.materialName} (${po.orderedQty} units) at ${plant}`
+            },
+            ...state.auditLogs
+          ]
+        }));
+      },
+
+      updatePO: (id, updates) => {
+        set((state) => ({
+          purchaseOrders: state.purchaseOrders.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+          auditLogs: [
+            {
+              id: `aud-${Date.now()}`,
+              timestamp: new Date().toLocaleString(),
+              user: 'purchase.manager@mips.internal',
+              action: 'PO_UPDATED',
+              module: 'Procurement',
+              details: `Updated details for PO ID: ${id}`
             },
             ...state.auditLogs
           ]
@@ -2427,6 +2545,23 @@ export const useMipsStore = create<MipsState>()(
               action: 'CUSTOMER_PO_RECORDED',
               module: 'Customer Orders',
               details: `Received Customer PO ${newPO.customerPoNumber} from ${newPO.customerName} for ₹${totalAmount.toLocaleString()} (${totalOrderedQty} units).`
+            },
+            ...state.auditLogs
+          ]
+        }));
+      },
+
+      updateCustomerPO: (id, updates) => {
+        set((state) => ({
+          customerPOs: state.customerPOs.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+          auditLogs: [
+            {
+              id: `aud-${Date.now()}`,
+              timestamp: new Date().toLocaleString(),
+              user: 'sales.dispatch@mips.internal',
+              action: 'CUSTOMER_PO_UPDATED',
+              module: 'Customer Orders',
+              details: `Updated Customer PO ID: ${id}`
             },
             ...state.auditLogs
           ]
@@ -3069,6 +3204,47 @@ export const useMipsStore = create<MipsState>()(
               action: 'PRODUCTION_ENTRY',
               module: 'Production',
               details: `Production logged for ${log.productName}: ${log.actualQty} units (Target: ${log.targetQty}, ${productivityPct}%) at ${plant}`
+            },
+            ...state.auditLogs
+          ]
+        }));
+      },
+
+      updateProductionLog: (id, updates) => {
+        set((state) => ({
+          productionLogs: state.productionLogs.map((log) => {
+            if (log.id !== id) return log;
+            const updated = { ...log, ...updates };
+            const workingHours = updated.workingHours || 8;
+            updated.unitsPerHour = Number((updated.actualQty / workingHours).toFixed(2));
+            updated.productivityPct = Number(((updated.actualQty / updated.targetQty) * 100).toFixed(1));
+            return updated;
+          }),
+          auditLogs: [
+            {
+              id: `aud-${Date.now()}`,
+              timestamp: new Date().toLocaleString(),
+              user: updates.supervisor || 'Production Manager',
+              action: 'PRODUCTION_UPDATE',
+              module: 'Production',
+              details: `Updated production log #${id} - Target: ${updates.targetQty ?? 'unchanged'}, Actual: ${updates.actualQty ?? 'unchanged'}`
+            },
+            ...state.auditLogs
+          ]
+        }));
+      },
+
+      deleteProductionLog: (id) => {
+        set((state) => ({
+          productionLogs: state.productionLogs.filter((log) => log.id !== id),
+          auditLogs: [
+            {
+              id: `aud-${Date.now()}`,
+              timestamp: new Date().toLocaleString(),
+              user: 'Supervisor',
+              action: 'PRODUCTION_DELETE',
+              module: 'Production',
+              details: `Deleted production entry #${id}`
             },
             ...state.auditLogs
           ]

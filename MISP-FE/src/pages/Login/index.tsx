@@ -265,7 +265,9 @@ const LoginPage = () => {
                             {pin.map((digit, idx) => (
                                 <input
                                     key={idx}
-                                    ref={(el) => (pinRefs.current[idx] = el)}
+                                    ref={(el) => {
+                                        pinRefs.current[idx] = el;
+                                    }}
                                     type={showPin ? "text" : "password"}
                                     inputMode="numeric"
                                     maxLength={1}

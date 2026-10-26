@@ -25,13 +25,23 @@ import {
   ChevronDown,
   ChevronRight,
   Package,
-  Cpu
+  Cpu,
+  Edit2
 } from 'lucide-react';
 import { useMipsStore, Material, Product, StockLedgerEntry, isPlantMatch } from '@/store/useMipsStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TablePagination, usePagination } from '@/components/common/TablePagination';
 import FinishedGoodsPage from '@/pages/FinishedGoods';
 
 export const InventoryPage: React.FC = () => {
@@ -40,13 +50,20 @@ export const InventoryPage: React.FC = () => {
     finishedGoods: rawFinishedGoods,
     stockLedger: rawStockLedger,
     products,
+    employees,
     adjustStock,
+    updateMaterial,
     selectedPlant
   } = useMipsStore();
 
   const materials = rawMaterials.filter((m) => isPlantMatch(m.plant, selectedPlant));
   const finishedGoods = (rawFinishedGoods || []).filter((fg) => isPlantMatch(fg.plant, selectedPlant));
   const stockLedger = rawStockLedger.filter((s) => isPlantMatch(s.plant, selectedPlant));
+
+  const authorizedEmployees = React.useMemo(() => {
+    const plantEmps = (employees || []).filter((e) => isPlantMatch(e.plant, selectedPlant));
+    return plantEmps.length > 0 ? plantEmps : (employees || []);
+  }, [employees, selectedPlant]);
 
   const [activeTab, setActiveTab] = useState<'stock' | 'finished_goods' | 'ledger'>('stock');
   const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped');
@@ -58,10 +75,13 @@ export const InventoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [warehouseFilter, setWarehouseFilter] = useState<string>('All');
+  const [wattageFilter, setWattageFilter] = useState<string>('All');
 
   // Ledger Search & Filter
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [ledgerTxFilter, setLedgerTxFilter] = useState<string>('All');
+  const [ledgerStartDate, setLedgerStartDate] = useState<string>('');
+  const [ledgerEndDate, setLedgerEndDate] = useState<string>('');
 
   // Stock Movement & Adjustment Modal State
   const [showAdjModal, setShowAdjModal] = useState(false);
@@ -82,14 +102,73 @@ export const InventoryPage: React.FC = () => {
   const [originalRef, setOriginalRef] = useState<string>('');
   const [rtvDefectReason, setRtvDefectReason] = useState<string>('Electrical parameter / CCT chromaticity drift beyond spec');
   const [scrapReason, setScrapReason] = useState<string>('Damaged / Hi-Pot breakdown during QA verification');
-  const [authorizingPerson, setAuthorizingPerson] = useState<string>('Store Incharge (Authorized)');
+  const [authorizingPerson, setAuthorizingPerson] = useState<string>('Ramesh Sharma (Store Manager)');
 
   // Common
   const [adjQuantity, setAdjQuantity] = useState<number>(0);
   const [adjReason, setAdjReason] = useState<string>('');
 
+  // Edit Material State
+  const [showEditMatModal, setShowEditMatModal] = useState(false);
+  const [editingMatId, setEditingMatId] = useState('');
+  const [editMatCode, setEditMatCode] = useState('');
+  const [editMatName, setEditMatName] = useState('');
+  const [editMatCategory, setEditMatCategory] = useState<Material['category']>('Electronics');
+  const [editMatUom, setEditMatUom] = useState('Pcs');
+  const [editMatSupplier, setEditMatSupplier] = useState('');
+  const [editMatWarehouse, setEditMatWarehouse] = useState('');
+  const [editMatLocation, setEditMatLocation] = useState('');
+  const [editMatMinStock, setEditMatMinStock] = useState<number>(0);
+  const [editMatMaxStock, setEditMatMaxStock] = useState<number>(0);
+  const [editMatReorderLevel, setEditMatReorderLevel] = useState<number>(0);
+  const [editMatSafetyStock, setEditMatSafetyStock] = useState<number>(0);
+  const [editMatCost, setEditMatCost] = useState<number>(0);
+  const [editMatStatus, setEditMatStatus] = useState<Material['status']>('Active');
+
+  const openEditMaterial = (mat: Material) => {
+    setEditingMatId(mat.id);
+    setEditMatCode(mat.code);
+    setEditMatName(mat.name);
+    setEditMatCategory(mat.category);
+    setEditMatUom(mat.uom);
+    setEditMatSupplier(mat.supplier);
+    setEditMatWarehouse(mat.warehouse);
+    setEditMatLocation(mat.location);
+    setEditMatMinStock(mat.minStock);
+    setEditMatMaxStock(mat.maxStock);
+    setEditMatReorderLevel(mat.reorderLevel);
+    setEditMatSafetyStock(mat.safetyStock);
+    setEditMatCost(mat.standardCost);
+    setEditMatStatus(mat.status);
+    setShowEditMatModal(true);
+  };
+
+  const handleSaveEditMaterial = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMatId) return;
+
+    updateMaterial(editingMatId, {
+      name: editMatName,
+      category: editMatCategory,
+      uom: editMatUom,
+      supplier: editMatSupplier,
+      warehouse: editMatWarehouse,
+      location: editMatLocation,
+      minStock: editMatMinStock,
+      maxStock: editMatMaxStock,
+      reorderLevel: editMatReorderLevel,
+      safetyStock: editMatSafetyStock,
+      standardCost: editMatCost,
+      status: editMatStatus,
+    });
+
+    setShowEditMatModal(false);
+  };
+
   // Extract unique warehouses dynamically for the active plant
   const dynamicWarehouses = Array.from(new Set(materials.map((m) => m.warehouse))).filter(Boolean);
+  // Extract all distinct categories from materials
+  const dynamicCategories = Array.from(new Set(materials.map((m) => m.category))).filter(Boolean);
   // Extract all distinct suppliers from rawMaterials
   const allSuppliers = Array.from(new Set(rawMaterials.map((m) => m.supplier).filter(Boolean)));
 
@@ -119,14 +198,46 @@ export const InventoryPage: React.FC = () => {
     }
   }, [selectedMatId, currentMaterial]);
 
-  const filteredMaterials = materials.filter((m) => {
-    const matchesSearch =
-      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'All' || m.category === categoryFilter;
-    const matchesWarehouse = warehouseFilter === 'All' || m.warehouse === warehouseFilter;
-    return matchesSearch && matchesCategory && matchesWarehouse;
-  });
+  const matchesCategoryHelper = (cat: string, subCat?: string) => {
+    if (categoryFilter === 'All') return true;
+    if (cat === categoryFilter || subCat === categoryFilter) return true;
+    if (categoryFilter === 'Electronic Drivers') {
+      return cat === 'Electronics' || subCat?.includes('Power') || subCat?.includes('Driver');
+    }
+    if (categoryFilter === 'LED Diodes & COB') {
+      return cat === 'Electronics' || subCat?.includes('LED') || subCat?.includes('COB');
+    }
+    if (categoryFilter === 'Housings & Die-Cast') {
+      return cat === 'Mechanical' || subCat?.includes('Heatsink') || subCat?.includes('Castings');
+    }
+    if (categoryFilter === 'Diffusers & Optics') {
+      return cat === 'Optical' || subCat?.includes('Diffuser');
+    }
+    if (categoryFilter === 'Wiring & Hardware') {
+      return cat === 'Hardware' || subCat?.includes('Wiring') || subCat?.includes('Fasteners');
+    }
+    if (categoryFilter === 'Packaging & Retail Boxes') {
+      return cat === 'Packaging' || subCat?.includes('Retail');
+    }
+    return false;
+  };
+
+  const filteredMaterials = React.useMemo(() => {
+    return materials.filter((m) => {
+      const matchesSearch =
+        !searchTerm ||
+        m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.code.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = matchesCategoryHelper(m.category, m.subCategory);
+      const matchesWarehouse = warehouseFilter === 'All' || m.warehouse === warehouseFilter;
+      const matchesWattage =
+        wattageFilter === 'All' ||
+        products.some(
+          (p) => p.wattage === wattageFilter && p.bom.some((b) => b.materialId === m.id || b.materialCode === m.code)
+        );
+      return matchesSearch && matchesCategory && matchesWarehouse && matchesWattage;
+    });
+  }, [materials, products, searchTerm, categoryFilter, warehouseFilter, wattageFilter]);
 
   // Helper to calculate scrap / rejection quantity per material from stock ledger
   const getMaterialRejectionCount = (matId: string) => {
@@ -171,31 +282,109 @@ export const InventoryPage: React.FC = () => {
   };
 
   // Filtered products for Grouped View
-  const filteredProducts = products.filter((p) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    const prodMatches = p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term);
-    const subpartMatches = p.bom.some(
-      (b) => b.materialName.toLowerCase().includes(term) || b.materialCode.toLowerCase().includes(term)
-    );
-    return prodMatches || subpartMatches;
-  });
+  const filteredProducts = React.useMemo(() => {
+    return products.filter((p) => {
+      let termMatches = true;
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const prodMatches = p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term);
+        const subpartMatches = p.bom.some(
+          (b) => b.materialName.toLowerCase().includes(term) || b.materialCode.toLowerCase().includes(term)
+        );
+        termMatches = prodMatches || subpartMatches;
+      }
+      if (!termMatches) return false;
 
-  const filteredLedger = stockLedger.filter((row) => {
-    const q = ledgerSearch.toLowerCase();
-    const matchesQuery =
-      !q ||
-      row.materialName.toLowerCase().includes(q) ||
-      row.materialCode.toLowerCase().includes(q) ||
-      row.referenceNo.toLowerCase().includes(q) ||
-      (row.supplier && row.supplier.toLowerCase().includes(q)) ||
-      (row.batchNo && row.batchNo.toLowerCase().includes(q)) ||
-      (row.invoiceNo && row.invoiceNo.toLowerCase().includes(q)) ||
-      (row.notes && row.notes.toLowerCase().includes(q));
+      if (wattageFilter !== 'All' && p.wattage !== wattageFilter) {
+        return false;
+      }
 
-    const matchesTx = ledgerTxFilter === 'All' || row.transactionType === ledgerTxFilter;
-    return matchesQuery && matchesTx;
-  });
+      if (categoryFilter !== 'All') {
+        const prodCatMatch = p.category === categoryFilter;
+        const subpartCatMatch = p.bom.some((b) => {
+          const mat = materials.find((m) => m.id === b.materialId || m.code === b.materialCode);
+          if (!mat) return false;
+          return matchesCategoryHelper(mat.category, mat.subCategory);
+        });
+        if (!prodCatMatch && !subpartCatMatch) return false;
+      }
+
+      if (warehouseFilter !== 'All') {
+        const subpartWhMatch = p.bom.some((b) => {
+          const mat = materials.find((m) => m.id === b.materialId || m.code === b.materialCode);
+          return mat?.warehouse === warehouseFilter;
+        });
+        if (!subpartWhMatch) return false;
+      }
+
+      return true;
+    });
+  }, [products, materials, searchTerm, categoryFilter, warehouseFilter, wattageFilter]);
+
+  const filteredLedger = React.useMemo(() => {
+    return stockLedger.filter((row) => {
+      const q = ledgerSearch.toLowerCase();
+      const matchesQuery =
+        !q ||
+        row.materialName.toLowerCase().includes(q) ||
+        row.materialCode.toLowerCase().includes(q) ||
+        row.referenceNo.toLowerCase().includes(q) ||
+        (row.supplier && row.supplier.toLowerCase().includes(q)) ||
+        (row.batchNo && row.batchNo.toLowerCase().includes(q)) ||
+        (row.invoiceNo && row.invoiceNo.toLowerCase().includes(q)) ||
+        (row.notes && row.notes.toLowerCase().includes(q));
+
+      const matchesTx = ledgerTxFilter === 'All' || row.transactionType === ledgerTxFilter;
+      const matchesDate =
+        (!ledgerStartDate || row.date >= ledgerStartDate) &&
+        (!ledgerEndDate || row.date <= ledgerEndDate);
+
+      return matchesQuery && matchesTx && matchesDate;
+    });
+  }, [stockLedger, ledgerSearch, ledgerTxFilter, ledgerStartDate, ledgerEndDate]);
+
+  // Pagination for Grouped View (Products)
+  const {
+    currentPage: prodPage,
+    setCurrentPage: setProdPage,
+    pageSize: prodPageSize,
+    setPageSize: setProdPageSize,
+    totalItems: totalProdItems,
+    totalPages: totalProdPages,
+    paginatedItems: paginatedProducts,
+  } = usePagination(filteredProducts, 5);
+
+  // Pagination for Flat View (Materials)
+  const {
+    currentPage: matPage,
+    setCurrentPage: setMatPage,
+    pageSize: matPageSize,
+    setPageSize: setMatPageSize,
+    totalItems: totalMatItems,
+    totalPages: totalMatPages,
+    paginatedItems: paginatedMaterials,
+  } = usePagination(filteredMaterials, 10);
+
+  // Pagination for Live Stock Ledger
+  const {
+    currentPage: ledgerPage,
+    setCurrentPage: setLedgerPage,
+    pageSize: ledgerPageSize,
+    setPageSize: setLedgerPageSize,
+    totalItems: totalLedgerItems,
+    totalPages: totalLedgerPages,
+    paginatedItems: paginatedLedger,
+  } = usePagination(filteredLedger, 15);
+
+  // Reset pagination to page 1 whenever search, filters or view mode change
+  React.useEffect(() => {
+    setMatPage(1);
+    setProdPage(1);
+  }, [searchTerm, categoryFilter, warehouseFilter, wattageFilter, viewMode]);
+
+  React.useEffect(() => {
+    setLedgerPage(1);
+  }, [ledgerSearch, ledgerTxFilter, ledgerStartDate, ledgerEndDate]);
 
   const handleApplyMovement = (e: React.FormEvent) => {
     e.preventDefault();
@@ -403,32 +592,54 @@ export const InventoryPage: React.FC = () => {
                   </button>
                 </div>
 
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="h-8 text-xs bg-slate-50 dark:bg-slate-900 border rounded-lg px-2 text-slate-700 dark:text-slate-300"
-                >
-                  <option value="All">All Categories</option>
-                  <option value="Electronic Drivers">Electronic Drivers</option>
-                  <option value="LED Diodes & COB">LED Diodes & COB</option>
-                  <option value="Housings & Die-Cast">Housings & Die-Cast</option>
-                  <option value="Diffusers & Optics">Diffusers & Optics</option>
-                  <option value="Wiring & Hardware">Wiring & Hardware</option>
-                  <option value="Packaging & Retail Boxes">Packaging & Retail Boxes</option>
-                </select>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[150px] h-8 text-xs">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Categories</SelectItem>
+                    {dynamicCategories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="Electronic Drivers">Electronic Drivers</SelectItem>
+                    <SelectItem value="LED Diodes & COB">LED Diodes & COB</SelectItem>
+                    <SelectItem value="Housings & Die-Cast">Housings & Die-Cast</SelectItem>
+                    <SelectItem value="Diffusers & Optics">Diffusers & Optics</SelectItem>
+                    <SelectItem value="Wiring & Hardware">Wiring & Hardware</SelectItem>
+                    <SelectItem value="Packaging & Retail Boxes">Packaging & Retail Boxes</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
-                  value={warehouseFilter}
-                  onChange={(e) => setWarehouseFilter(e.target.value)}
-                  className="h-8 text-xs bg-slate-50 dark:bg-slate-900 border rounded-lg px-2 text-slate-700 dark:text-slate-300"
-                >
-                  <option value="All">All Storage Locations</option>
-                  {dynamicWarehouses.map((wh) => (
-                    <option key={wh} value={wh}>
-                      {wh}
-                    </option>
-                  ))}
-                </select>
+                <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+                  <SelectTrigger className="w-[155px] h-8 text-xs">
+                    <SelectValue placeholder="All Storage Locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Storage Locations</SelectItem>
+                    {dynamicWarehouses.map((wh) => (
+                      <SelectItem key={wh} value={wh}>
+                        {wh}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={wattageFilter} onValueChange={setWattageFilter}>
+                  <SelectTrigger className="w-[125px] h-8 text-xs">
+                    <SelectValue placeholder="All Wattages" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Wattages</SelectItem>
+                    <SelectItem value="5W">5W</SelectItem>
+                    <SelectItem value="9W">9W</SelectItem>
+                    <SelectItem value="12W">12W</SelectItem>
+                    <SelectItem value="15W">15W</SelectItem>
+                    <SelectItem value="20W">20W</SelectItem>
+                    <SelectItem value="50W">50W</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
@@ -437,7 +648,12 @@ export const InventoryPage: React.FC = () => {
             {/* VIEW MODE 1: GROUPED BY PRODUCT / BOM SUBPARTS (User Feedback #1) */}
             {viewMode === 'grouped' ? (
               <div className="space-y-3">
-                {filteredProducts.map((prod) => {
+                {paginatedProducts.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed">
+                    No products found matching the selected filters.
+                  </div>
+                ) : (
+                  paginatedProducts.map((prod) => {
                   const isExpanded = !!expandedProducts[prod.id];
                   const { capacity, bottleneck } = calculateBuildableCapacity(prod);
 
@@ -592,7 +808,7 @@ export const InventoryPage: React.FC = () => {
                       )}
                     </div>
                   );
-                })}
+                }))}
               </div>
             ) : (
               /* VIEW MODE 2: FLAT MATERIALS LIST WITH DETAILED TRACEABILITY (User Feedback #4) */
@@ -610,10 +826,11 @@ export const InventoryPage: React.FC = () => {
                       <th className="py-2.5 px-3 text-right">Reorder Pt</th>
                       <th className="py-2.5 px-3 text-center">Status</th>
                       <th className="py-2.5 px-3 text-right">Valuation</th>
+                      <th className="py-2.5 px-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {filteredMaterials.map((mat) => {
+                    {paginatedMaterials.map((mat) => {
                       const isLow = mat.currentStock <= mat.reorderLevel;
                       const isCritical = mat.currentStock <= mat.safetyStock;
                       const isOverstock = mat.currentStock > mat.maxStock;
@@ -675,6 +892,17 @@ export const InventoryPage: React.FC = () => {
                           <td className="py-3 px-3 text-right font-semibold text-slate-700 dark:text-slate-300">
                             ₹{((mat.currentStock * mat.standardCost) / 1000).toFixed(1)}k
                           </td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditMaterial(mat)}
+                              className="h-7 w-7 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              title="Edit Material Specs"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -682,6 +910,15 @@ export const InventoryPage: React.FC = () => {
                 </table>
               </div>
             )}
+            <TablePagination
+              currentPage={viewMode === 'grouped' ? prodPage : matPage}
+              totalPages={viewMode === 'grouped' ? totalProdPages : totalMatPages}
+              totalItems={viewMode === 'grouped' ? totalProdItems : totalMatItems}
+              pageSize={viewMode === 'grouped' ? prodPageSize : matPageSize}
+              onPageChange={viewMode === 'grouped' ? setProdPage : setMatPage}
+              onPageSizeChange={viewMode === 'grouped' ? setProdPageSize : setMatPageSize}
+              pageSizeOptions={viewMode === 'grouped' ? [5, 10, 20] : [10, 25, 50, 100]}
+            />
           </CardContent>
         </Card>
       )}
@@ -717,21 +954,52 @@ export const InventoryPage: React.FC = () => {
                   />
                 </div>
 
-                <select
-                  value={ledgerTxFilter}
-                  onChange={(e) => setLedgerTxFilter(e.target.value)}
-                  className="h-8 text-xs bg-slate-50 dark:bg-slate-900 border rounded-lg px-2 text-slate-700 dark:text-slate-300"
-                >
-                  <option value="All">All Transactions</option>
-                  <option value="Goods Receipt (GRN)">Goods Receipt (GRN)</option>
-                  <option value="Supplier Inbound (Direct)">Supplier Inbound (Direct)</option>
-                  <option value="Return to Vendor (RTV)">Return to Vendor (RTV)</option>
-                  <option value="Kit Issue">Kit Issue</option>
-                  <option value="Material Return">Material Return</option>
-                  <option value="Wastage / Scrap">Wastage / Scrap</option>
-                  <option value="Adjustment (+)">Adjustment (+)</option>
-                  <option value="Adjustment (-)">Adjustment (-)</option>
-                </select>
+                <Select value={ledgerTxFilter} onValueChange={setLedgerTxFilter}>
+                  <SelectTrigger className="w-[170px] h-8 text-xs">
+                    <SelectValue placeholder="All Transactions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Transactions</SelectItem>
+                    <SelectItem value="Goods Receipt (GRN)">Goods Receipt (GRN)</SelectItem>
+                    <SelectItem value="Supplier Inbound (Direct)">Supplier Inbound (Direct)</SelectItem>
+                    <SelectItem value="Return to Vendor (RTV)">Return to Vendor (RTV)</SelectItem>
+                    <SelectItem value="Kit Issue">Kit Issue</SelectItem>
+                    <SelectItem value="Material Return">Material Return</SelectItem>
+                    <SelectItem value="Wastage / Scrap">Wastage / Scrap</SelectItem>
+                    <SelectItem value="Adjustment (+)">Adjustment (+)</SelectItem>
+                    <SelectItem value="Adjustment (-)">Adjustment (-)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <DatePicker
+                    value={ledgerStartDate}
+                    onChange={setLedgerStartDate}
+                    placeholder="Start date"
+                    className="w-32"
+                  />
+                  <span className="text-slate-400 text-[10px]">to</span>
+                  <DatePicker
+                    value={ledgerEndDate}
+                    onChange={setLedgerEndDate}
+                    placeholder="End date"
+                    className="w-32"
+                  />
+                  {(ledgerStartDate || ledgerEndDate) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setLedgerStartDate('');
+                        setLedgerEndDate('');
+                      }}
+                      className="h-8 px-2 text-xs text-rose-500 hover:text-rose-700"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -753,7 +1021,7 @@ export const InventoryPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredLedger.map((row) => (
+                  {paginatedLedger.map((row) => (
                     <tr key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                       <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{row.date}</td>
                       <td className="py-3 px-3">
@@ -823,16 +1091,24 @@ export const InventoryPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              currentPage={ledgerPage}
+              totalPages={totalLedgerPages}
+              totalItems={totalLedgerItems}
+              pageSize={ledgerPageSize}
+              onPageChange={setLedgerPage}
+              onPageSizeChange={setLedgerPageSize}
+            />
           </CardContent>
         </Card>
       )}
 
       {/* Enhanced Stock Movement & Supplier Connection Modal */}
       {showAdjModal && currentMaterial && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <ArrowUpDown className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
@@ -850,7 +1126,8 @@ export const InventoryPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleApplyMovement} className="space-y-4 text-xs">
+            <form onSubmit={handleApplyMovement} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
               {/* Step 1: Direction Toggle */}
               <div>
                 <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
@@ -1125,12 +1402,25 @@ export const InventoryPage: React.FC = () => {
                   <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                     6. Authorized Officer *
                   </label>
-                  <Input
+                  <select
                     value={authorizingPerson}
                     onChange={(e) => setAuthorizingPerson(e.target.value)}
-                    className="h-9"
+                    className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
                     required
-                  />
+                  >
+                    {authorizedEmployees.map((emp) => (
+                      <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                        {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                      </option>
+                    ))}
+                    {authorizedEmployees.length === 0 && (
+                      <>
+                        <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
+                        <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
+                        <option value="System Super Admin">System Super Admin</option>
+                      </>
+                    )}
+                  </select>
                 </div>
               </div>
 
@@ -1171,8 +1461,10 @@ export const InventoryPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Modal Actions */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              </div>
+
+              {/* Modal Actions - PINNED FOOTER */}
+              <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowAdjModal(false)}>
                   Cancel
                 </Button>
@@ -1183,6 +1475,176 @@ export const InventoryPage: React.FC = () => {
                 >
                   <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
                   Post Transaction to Ledger
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Material Specifications Modal */}
+      {showEditMatModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Edit2 className="w-4 h-4 text-blue-600" />
+                  Edit Material Specifications
+                </h2>
+                <p className="text-[11px] text-slate-500 font-mono mt-0.5">{editMatCode}</p>
+              </div>
+              <button onClick={() => setShowEditMatModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditMaterial} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+                <div>
+                  <label className="block font-semibold mb-1">Description / Spec</label>
+                  <Input
+                    required
+                    value={editMatName}
+                    onChange={(e) => setEditMatName(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Category</label>
+                    <select
+                      value={editMatCategory}
+                      onChange={(e) => setEditMatCategory(e.target.value as any)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    >
+                      <option value="Electronics">Electronics</option>
+                      <option value="Mechanical">Mechanical</option>
+                      <option value="Optical">Optical</option>
+                      <option value="Hardware">Hardware</option>
+                      <option value="Packaging">Packaging</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Unit of Measure (UOM)</label>
+                    <select
+                      value={editMatUom}
+                      onChange={(e) => setEditMatUom(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    >
+                      <option value="Pcs">Pcs</option>
+                      <option value="Meters">Meters</option>
+                      <option value="Sets">Sets</option>
+                      <option value="Kg">Kg</option>
+                      <option value="Rolls">Rolls</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Primary Supplier</label>
+                    <select
+                      value={editMatSupplier}
+                      onChange={(e) => setEditMatSupplier(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    >
+                      <option value="">-- Select Supplier --</option>
+                      {allSuppliers.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Assigned Warehouse</label>
+                    <select
+                      value={editMatWarehouse}
+                      onChange={(e) => setEditMatWarehouse(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    >
+                      {dynamicWarehouses.map((wh) => (
+                        <option key={wh} value={wh}>
+                          {wh}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Rack / Bin Location</label>
+                    <Input
+                      value={editMatLocation}
+                      onChange={(e) => setEditMatLocation(e.target.value)}
+                      className="h-9 font-mono"
+                      placeholder="e.g. RACK-B2-04"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Unit Standard Cost (₹)</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editMatCost}
+                      onChange={(e) => setEditMatCost(Number(e.target.value))}
+                      className="h-9 font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Safety Stock</label>
+                    <Input
+                      type="number"
+                      value={editMatSafetyStock}
+                      onChange={(e) => setEditMatSafetyStock(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Reorder Point</label>
+                    <Input
+                      type="number"
+                      value={editMatReorderLevel}
+                      onChange={(e) => setEditMatReorderLevel(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Max Level</label>
+                    <Input
+                      type="number"
+                      value={editMatMaxStock}
+                      onChange={(e) => setEditMatMaxStock(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold mb-1">Material Status</label>
+                  <select
+                    value={editMatStatus}
+                    onChange={(e) => setEditMatStatus(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowEditMatModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  Save Specifications
                 </Button>
               </div>
             </form>

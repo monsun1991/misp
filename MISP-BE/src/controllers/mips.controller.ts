@@ -6,6 +6,7 @@ import { PurchaseOrderEntity } from "../models/purchase-order.model";
 import { KitEntity } from "../models/kit.model";
 import { User } from "../models/user.model";
 import bcrypt from "bcrypt";
+import { formatUserProfile, computeUserPermissions } from "../utils/rbac.util";
 
 export class MipsController {
   // Summary KPIs for Dashboard
@@ -139,7 +140,11 @@ export class MipsController {
       const users = await repo.find({
         order: { createdAt: "DESC" },
       });
-      res.status(200).json({ success: true, data: users });
+      const formatted = users.map(u => ({
+        ...formatUserProfile(u),
+        permissions: computeUserPermissions(u),
+      }));
+      res.status(200).json({ success: true, data: formatted });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -152,6 +157,7 @@ export class MipsController {
         empCode,
         email,
         password,
+        pin,
         fullName,
         phoneNumber,
         role,
@@ -169,15 +175,17 @@ export class MipsController {
         revokedPermissionsJson,
       } = req.body;
 
-      const hashedPassword = await bcrypt.hash(password || "Mips@2026", 10);
+      const finalPin = pin ? String(pin).trim() : "123456";
+      const hashedPassword = await bcrypt.hash(password || finalPin, 10);
       const user = repo.create({
         empCode: empCode || `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
         email,
         password: hashedPassword,
+        pin: finalPin,
         fullName,
         phoneNumber: phoneNumber || "",
         role: role || "Worker",
-        plant: plant || "Plant 1 - Pune",
+        plant: plant || "Plant 1 - Pune Hub",
         warehouse: warehouse || "Main Raw Material Store",
         department: department || "Final Assembly Line 1",
         team: team || "Line 1 Alpha",
@@ -195,7 +203,10 @@ export class MipsController {
       const saved = await repo.save(user);
       res.status(201).json({
         success: true,
-        data: saved,
+        data: {
+          ...formatUserProfile(saved),
+          permissions: computeUserPermissions(saved),
+        },
       });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
@@ -207,6 +218,12 @@ export class MipsController {
       const repo = AppDataSource.getRepository(User);
       const { id } = req.params;
       const updateData = { ...req.body };
+      if (updateData.pin) {
+        updateData.pin = String(updateData.pin).trim();
+        updateData.password = await bcrypt.hash(updateData.password || updateData.pin, 10);
+      } else if (updateData.password) {
+        updateData.password = await bcrypt.hash(updateData.password, 10);
+      }
       if (Array.isArray(updateData.customPermissions)) {
         updateData.customPermissionsJson = JSON.stringify(updateData.customPermissions);
         delete updateData.customPermissions;
@@ -215,9 +232,18 @@ export class MipsController {
         updateData.revokedPermissionsJson = JSON.stringify(updateData.revokedPermissions);
         delete updateData.revokedPermissions;
       }
+      if (Array.isArray(updateData.skills)) {
+        updateData.skills = updateData.skills.join(", ");
+      }
       await repo.update(id, updateData);
       const updated = await repo.findOne({ where: { id } });
-      res.status(200).json({ success: true, data: updated });
+      res.status(200).json({
+        success: true,
+        data: updated ? {
+          ...formatUserProfile(updated),
+          permissions: computeUserPermissions(updated),
+        } : null,
+      });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
     }

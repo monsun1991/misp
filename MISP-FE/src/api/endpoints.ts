@@ -5,12 +5,14 @@ export const API_ENDPOINTS = {
         login: `${BASE_URL}/auth/login`,
         logout: `${BASE_URL}/auth/logout`,
         getProfile: `${BASE_URL}/auth/profile`,
+        changePin: `${BASE_URL}/auth/change-pin`,
         sendResetOtp: `${BASE_URL}/auth/send-reset-otp`,
         resetPasswordWithOtp: `${BASE_URL}/auth/reset-password-with-otp`,
     },
     auth: {
         login: `${BASE_URL}/auth/login`,
         profile: `${BASE_URL}/auth/profile`,
+        changePin: `${BASE_URL}/auth/change-pin`,
     },
     dashboard: {
         overview: `${BASE_URL}/dashboard/overview`,

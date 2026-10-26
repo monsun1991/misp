@@ -20,7 +20,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useMipsStore } from '@/store/useMipsStore';
-import type { Role, Department } from '@/store/useMipsStore';
+import type { Role, Department, PlantLocation } from '@/store/useMipsStore';
 import { mipsService } from '@/api/services/mips.service';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -180,6 +180,74 @@ export const SettingsPage: React.FC = () => {
   const [plantDepts, setPlantDepts] = useState<number>(4);
   const [plantDesc, setPlantDesc] = useState('');
   const [plantStatus, setPlantStatus] = useState<'Active' | 'Commissioning'>('Active');
+
+  // Edit Department state
+  const [showEditDeptModal, setShowEditDeptModal] = useState(false);
+  const [editingDeptId, setEditingDeptId] = useState('');
+  const [editDeptName, setEditDeptName] = useState('');
+  const [editDeptPlant, setEditDeptPlant] = useState('');
+  const [editDeptManager, setEditDeptManager] = useState('');
+  const [editDeptDesc, setEditDeptDesc] = useState('');
+  const [editDeptTeams, setEditDeptTeams] = useState('');
+
+  const handleOpenEditDept = (dept: Department) => {
+    setEditingDeptId(dept.id);
+    setEditDeptName(dept.name);
+    setEditDeptPlant(dept.plant);
+    setEditDeptManager(dept.manager);
+    setEditDeptDesc(dept.description || '');
+    setEditDeptTeams(dept.activeTeams?.join(', ') || '');
+    setShowEditDeptModal(true);
+  };
+
+  const handleSaveEditDept = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateDepartment(editingDeptId, {
+      name: editDeptName,
+      plant: editDeptPlant,
+      manager: editDeptManager,
+      description: editDeptDesc,
+      activeTeams: editDeptTeams.split(',').map((t) => t.trim()).filter(Boolean),
+    });
+    setShowEditDeptModal(false);
+  };
+
+  // Edit Plant state
+  const [showEditPlantModal, setShowEditPlantModal] = useState(false);
+  const [editingPlantId, setEditingPlantId] = useState('');
+  const [editPlantName, setEditPlantName] = useState('');
+  const [editPlantCity, setEditPlantCity] = useState('');
+  const [editPlantType, setEditPlantType] = useState('Full Manufacturing & SMT');
+  const [editPlantManager, setEditPlantManager] = useState('');
+  const [editPlantDesc, setEditPlantDesc] = useState('');
+  const [editPlantWarehouses, setEditPlantWarehouses] = useState<number>(2);
+  const [editPlantDepts, setEditPlantDepts] = useState<number>(4);
+
+  const handleOpenEditPlant = (plant: PlantLocation) => {
+    setEditingPlantId(plant.id);
+    setEditPlantName(plant.name);
+    setEditPlantCity(plant.city);
+    setEditPlantType(plant.type);
+    setEditPlantManager(plant.manager);
+    setEditPlantDesc(plant.description);
+    setEditPlantWarehouses(plant.warehousesCount);
+    setEditPlantDepts(plant.departmentsCount);
+    setShowEditPlantModal(true);
+  };
+
+  const handleSaveEditPlant = (e: React.FormEvent) => {
+    e.preventDefault();
+    updatePlant(editingPlantId, {
+      name: editPlantName,
+      city: editPlantCity,
+      type: editPlantType,
+      manager: editPlantManager,
+      description: editPlantDesc,
+      warehousesCount: editPlantWarehouses,
+      departmentsCount: editPlantDepts,
+    });
+    setShowEditPlantModal(false);
+  };
 
   // Factory settings state
   const [shiftATime, setShiftATime] = useState('08:00 - 16:30');
@@ -523,12 +591,22 @@ export const SettingsPage: React.FC = () => {
                 >
                   <div className="flex items-center justify-between border-b pb-2">
                     <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{d.name}</span>
-                    <button
-                      onClick={() => deleteDepartment(d.id)}
-                      className="text-red-400 hover:text-red-600"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenEditDept(d)}
+                        className="text-slate-400 hover:text-blue-600 p-1"
+                        title="Edit Department"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => deleteDepartment(d.id)}
+                        className="text-red-400 hover:text-red-600 p-1"
+                        title="Delete Department"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                   <div className="text-slate-500">
                     Plant: <strong className="text-slate-700 dark:text-slate-300">{d.plant}</strong>
@@ -878,6 +956,17 @@ export const SettingsPage: React.FC = () => {
                         {isSelected && (
                           <Badge className="bg-[#183638] text-[#84cc16] border border-[#84cc16]/40 text-[10px] py-0 px-2">Active Context</Badge>
                         )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditPlant(plant);
+                          }}
+                          className="text-slate-400 hover:text-blue-600 p-1"
+                          title="Edit Location"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
                         {plant.id !== 'plant-01' && plant.id !== 'plant-02' && (
                           <button
                             type="button"
@@ -1013,8 +1102,8 @@ export const SettingsPage: React.FC = () => {
 
       {/* Modal: Create Dynamic Role */}
       {showRoleModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Create Dynamic Custom Role
@@ -1092,8 +1181,8 @@ export const SettingsPage: React.FC = () => {
 
       {/* Modal: Create Dynamic Department */}
       {showDeptModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Add Manufacturing Department
@@ -1131,13 +1220,22 @@ export const SettingsPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">Department Head</label>
-                  <Input
-                    placeholder="Manager Name"
+                  <label className="block font-semibold mb-1">Department Head / Manager *</label>
+                  <select
                     value={deptManager}
                     onChange={(e) => setDeptManager(e.target.value)}
-                    className="h-9"
-                  />
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
+                    required
+                  >
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.name}>
+                        {emp.name} &bull; {emp.role} ({emp.department})
+                      </option>
+                    ))}
+                    {employees.length === 0 && (
+                      <option value="Department Manager">Department Manager</option>
+                    )}
+                  </select>
                 </div>
               </div>
 
@@ -1177,8 +1275,8 @@ export const SettingsPage: React.FC = () => {
 
       {/* Modal: Register New Manufacturing Plant / Location */}
       {showPlantModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -1246,13 +1344,24 @@ export const SettingsPage: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1">Plant Head / Manager</label>
-                  <Input
-                    placeholder="e.g. Rajesh Kulkarni"
+                  <label className="block font-semibold mb-1">Plant Head / Manager *</label>
+                  <select
                     value={plantManager}
                     onChange={(e) => setPlantManager(e.target.value)}
-                    className="h-9"
-                  />
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
+                    required
+                  >
+                    {employees
+                      .filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor'))
+                      .map((emp) => (
+                        <option key={emp.id} value={emp.name}>
+                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                        </option>
+                      ))}
+                    {employees.filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor')).length === 0 && (
+                      <option value="Plant Manager">Plant Manager</option>
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Warehouse Zones</label>
@@ -1305,6 +1414,206 @@ export const SettingsPage: React.FC = () => {
                 </Button>
                 <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold">
                   Register Facility & Update UBAC
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Department */}
+      {showEditDeptModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-blue-600" />
+                Edit Manufacturing Department
+              </h2>
+              <button onClick={() => setShowEditDeptModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditDept} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold mb-1">Department Name</label>
+                <Input
+                  required
+                  value={editDeptName}
+                  onChange={(e) => setEditDeptName(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Plant Location</label>
+                  <select
+                    value={editDeptPlant}
+                    onChange={(e) => setEditDeptPlant(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                  >
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Department Head *</label>
+                  <select
+                    value={editDeptManager}
+                    onChange={(e) => setEditDeptManager(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    required
+                  >
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.name}>
+                        {emp.name} &bull; {emp.role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Active Assembly Teams / Cells (Comma-separated)</label>
+                <Input
+                  value={editDeptTeams}
+                  onChange={(e) => setEditDeptTeams(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Scope & Purpose</label>
+                <textarea
+                  rows={2}
+                  value={editDeptDesc}
+                  onChange={(e) => setEditDeptDesc(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowEditDeptModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Plant */}
+      {showEditPlantModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-blue-600" />
+                Edit Facility Location
+              </h2>
+              <button onClick={() => setShowEditPlantModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditPlant} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Facility Name</label>
+                  <Input
+                    required
+                    value={editPlantName}
+                    onChange={(e) => setEditPlantName(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">City / Region</label>
+                  <Input
+                    required
+                    value={editPlantCity}
+                    onChange={(e) => setEditPlantCity(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Operating Facility Type</label>
+                  <select
+                    value={editPlantType}
+                    onChange={(e) => setEditPlantType(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                  >
+                    <option value="Full Manufacturing & SMT">Full Manufacturing & SMT</option>
+                    <option value="Die-Cast & Heavy Assembly">Die-Cast & Heavy Assembly</option>
+                    <option value="Assembly & Final Packaging Hub">Assembly & Final Packaging Hub</option>
+                    <option value="Regional Finished Goods Depot">Regional Finished Goods Depot</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Plant Head / General Manager *</label>
+                  <select
+                    value={editPlantManager}
+                    onChange={(e) => setEditPlantManager(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    required
+                  >
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.name}>
+                        {emp.name} &bull; {emp.role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Designated Warehouses Count</label>
+                  <Input
+                    type="number"
+                    value={editPlantWarehouses}
+                    onChange={(e) => setEditPlantWarehouses(Number(e.target.value))}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Department Units</label>
+                  <Input
+                    type="number"
+                    value={editPlantDepts}
+                    onChange={(e) => setEditPlantDepts(Number(e.target.value))}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Facility Description & Scope</label>
+                <textarea
+                  rows={2}
+                  value={editPlantDesc}
+                  onChange={(e) => setEditPlantDesc(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowEditPlantModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  Save Changes
                 </Button>
               </div>
             </form>

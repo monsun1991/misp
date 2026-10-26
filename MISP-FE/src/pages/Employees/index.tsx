@@ -32,6 +32,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TablePagination, usePagination } from '@/components/common/TablePagination';
 
 export const EmployeesPage: React.FC = () => {
   const {
@@ -125,6 +133,90 @@ export const EmployeesPage: React.FC = () => {
   const [workstation, setWorkstation] = useState('');
   const [status, setStatus] = useState<'Active' | 'Onboarding' | 'Probation'>('Active');
   const [skillsStr, setSkillsStr] = useState('Assembly, Testing');
+  const [loginPin, setLoginPin] = useState('123456');
+
+  // Edit Employee Modal State
+  const [showEditEmpModal, setShowEditEmpModal] = useState(false);
+  const [editingEmpId, setEditingEmpId] = useState('');
+  const [editEmpName, setEditEmpName] = useState('');
+  const [editEmpEmail, setEditEmpEmail] = useState('');
+  const [editEmpPhone, setEditEmpPhone] = useState('');
+  const [editEmpRole, setEditEmpRole] = useState('');
+  const [editEmpPlant, setEditEmpPlant] = useState('');
+  const [editEmpDept, setEditEmpDept] = useState('');
+  const [editEmpTeam, setEditEmpTeam] = useState('');
+  const [editEmpWorkstation, setEditEmpWorkstation] = useState('');
+  const [editEmpSupervisor, setEditEmpSupervisor] = useState('');
+  const [editEmpStatus, setEditEmpStatus] = useState<Employee['status']>('Active');
+  const [editEmpSkills, setEditEmpSkills] = useState('');
+  const [editEmpPin, setEditEmpPin] = useState('');
+
+  const handleOpenEditEmp = (emp: Employee) => {
+    setEditingEmpId(emp.id);
+    setEditEmpName(emp.name);
+    setEditEmpEmail(emp.email);
+    setEditEmpPhone(emp.phone);
+    setEditEmpRole(emp.role);
+    setEditEmpPlant(emp.plant || plants[0]?.name || 'Plant 1 - Pune Hub');
+    setEditEmpDept(emp.department);
+    setEditEmpTeam(emp.team);
+    setEditEmpWorkstation(emp.workstation || 'General Bench');
+    setEditEmpSupervisor(emp.supervisor || 'System Super Admin');
+    setEditEmpStatus(emp.status);
+    setEditEmpSkills(Array.isArray(emp.skills) ? emp.skills.join(', ') : '');
+    setEditEmpPin('');
+    setShowEditEmpModal(true);
+  };
+
+  const handleSaveEditEmp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const skillsArray = editEmpSkills.split(',').map((s) => s.trim()).filter(Boolean);
+      const updates: Partial<Employee> = {
+        name: editEmpName,
+        email: editEmpEmail,
+        phone: editEmpPhone,
+        role: editEmpRole,
+        plant: editEmpPlant,
+        department: editEmpDept,
+        team: editEmpTeam,
+        workstation: editEmpWorkstation,
+        supervisor: editEmpSupervisor,
+        status: editEmpStatus,
+        skills: skillsArray,
+      };
+
+      updateEmployee(editingEmpId, updates);
+
+      try {
+        const apiPayload: any = {
+          fullName: editEmpName,
+          email: editEmpEmail,
+          phoneNumber: editEmpPhone,
+          role: editEmpRole,
+          plant: editEmpPlant,
+          department: editEmpDept,
+          team: editEmpTeam,
+          workstation: editEmpWorkstation,
+          supervisor: editEmpSupervisor,
+          status: editEmpStatus,
+          skills: editEmpSkills,
+        };
+        if (editEmpPin && editEmpPin.trim().length >= 4) {
+          apiPayload.pin = editEmpPin.trim();
+          apiPayload.password = editEmpPin.trim();
+        }
+        await mipsService.updateUser(editingEmpId, apiPayload);
+      } catch (apiErr) {
+        console.warn('Backend API update skipped or failed, local state updated:', apiErr);
+      }
+
+      setShowEditEmpModal(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // UBAC (User-Based Access Control) Modal State
   const [selectedEmpForUBAC, setSelectedEmpForUBAC] = useState<Employee | null>(null);
@@ -258,6 +350,20 @@ export const EmployeesPage: React.FC = () => {
     return matchesPlant && matchesSearch && matchesRole && matchesDept && matchesStatus;
   });
 
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: paginatedEmployees,
+  } = usePagination(filteredEmployees, 10);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter, deptFilter, statusFilter, selectedPlant]);
+
   const handleOnboardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !empCode) return;
@@ -280,6 +386,8 @@ export const EmployeesPage: React.FC = () => {
         supervisor,
         status,
         skills: skillsStr,
+        pin: loginPin || '123456',
+        password: loginPin || '123456',
       });
 
       // 2. Update local state
@@ -305,6 +413,7 @@ export const EmployeesPage: React.FC = () => {
       setName('');
       setEmail('');
       setPhone('+91 ');
+      setLoginPin('123456');
       setEmpCode(`EMP-${Math.floor(1010 + Math.random() * 900)}`);
     } catch (err) {
       console.error('Failed to save onboarded employee', err);
@@ -427,43 +536,46 @@ export const EmployeesPage: React.FC = () => {
 
             {/* Dynamic Filters */}
             <div className="flex items-center gap-2 flex-wrap">
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="h-8 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2"
-              >
-                <option value="All">All Roles</option>
-                {roles.map((r) => (
-                  <option key={r.id} value={r.name}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-[140px] h-8 text-xs">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Roles</SelectItem>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={r.name}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-              <select
-                value={deptFilter}
-                onChange={(e) => setDeptFilter(e.target.value)}
-                className="h-8 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2"
-              >
-                <option value="All">All Departments</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.name}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={deptFilter} onValueChange={setDeptFilter}>
+                <SelectTrigger className="w-[155px] h-8 text-xs">
+                  <SelectValue placeholder="All Departments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Departments</SelectItem>
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.name}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-8 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2"
-              >
-                <option value="All">All Statuses</option>
-                <option value="Active">Active</option>
-                <option value="Onboarding">Onboarding</option>
-                <option value="Probation">Probation</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[130px] h-8 text-xs">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Statuses</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Onboarding">Onboarding</SelectItem>
+                  <SelectItem value="Probation">Probation</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
 
               <Button
                 variant="outline"
@@ -515,7 +627,7 @@ export const EmployeesPage: React.FC = () => {
                     </td>
                   </tr>
                 )}
-                {!isLoading && filteredEmployees.map((emp) => (
+                {!isLoading && paginatedEmployees.map((emp) => (
                   <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                     <td className="py-3 px-3 font-mono font-semibold text-blue-600">{emp.empCode}</td>
                     <td className="py-3 px-3">
@@ -592,6 +704,16 @@ export const EmployeesPage: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => handleOpenEditEmp(emp)}
+                          className="h-7 text-[11px] px-2 text-blue-600 border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-950/40 gap-1 font-medium"
+                          title="Edit Employee Profile"
+                        >
+                          <Edit2 className="w-3 h-3 text-blue-600" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => openUBACModal(emp)}
                           className="h-7 text-[11px] px-2 text-purple-700 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-950/40 gap-1 font-medium"
                           title="Configure User Based Access Control (UBAC)"
@@ -617,28 +739,38 @@ export const EmployeesPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 
       {/* Onboarding Wizard Modal */}
       {showOnboardModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
                   Employee Onboarding Wizard
                 </h2>
                 <p className="text-[11px] text-slate-500">
                   Register staff member, assign dynamic role & designate UBAC organizational scope.
                 </p>
               </div>
-              <button onClick={() => setShowOnboardModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowOnboardModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
                 &times;
               </button>
             </div>
 
-            <form onSubmit={handleOnboardSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleOnboardSubmit} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Full Legal Name</label>
@@ -680,6 +812,35 @@ export const EmployeesPage: React.FC = () => {
                     className="h-9"
                   />
                 </div>
+              </div>
+
+              {/* Login PIN / Password Configuration */}
+              <div className="p-3 rounded-xl bg-lime-50/70 dark:bg-lime-950/20 border border-lime-200 dark:border-lime-900/40">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block font-semibold text-lime-950 dark:text-lime-200 text-xs">
+                    Initial Login 6-Digit PIN *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setLoginPin('123456')}
+                    className="text-[11px] text-lime-700 dark:text-lime-400 hover:underline font-semibold"
+                  >
+                    Reset to Default (123456)
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="password"
+                    maxLength={6}
+                    value={loginPin}
+                    onChange={(e) => setLoginPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="123456"
+                    className="h-9 font-mono tracking-widest text-center font-bold text-sm bg-white dark:bg-slate-900"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                  Staff member uses this 6-digit PIN with their email or phone number to authenticate.
+                </p>
               </div>
 
               {/* Dynamic Role & Department */}
@@ -746,14 +907,34 @@ export const EmployeesPage: React.FC = () => {
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       3. Reporting To (Department Head / Supervisor) *
                     </label>
-                    <Input
+                    <select
                       value={supervisor}
                       onChange={(e) => setSupervisor(e.target.value)}
-                      placeholder="e.g. Department Manager"
-                      className="h-8 text-xs font-medium"
-                    />
+                      className="w-full h-8 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-medium text-slate-900 dark:text-slate-100"
+                      required
+                    >
+                      {currentDeptObj?.manager && (
+                        <option value={currentDeptObj.manager}>
+                          {currentDeptObj.manager} (Department Manager - Default)
+                        </option>
+                      )}
+                      {employees
+                        .filter(
+                          (emp) =>
+                            emp.role.includes('Manager') ||
+                            emp.role.includes('Supervisor') ||
+                            emp.role.includes('Admin') ||
+                            emp.role.includes('Lead')
+                        )
+                        .map((emp) => (
+                          <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                            {emp.name} &bull; {emp.role} ({emp.department})
+                          </option>
+                        ))}
+                      <option value="System Super Admin">System Super Admin</option>
+                    </select>
                     <p className="text-[10px] text-slate-500 mt-1">
-                      {currentDeptObj ? `Department Manager: ${currentDeptObj.manager}` : 'Auto-populated from selected department'}
+                      {currentDeptObj ? `Default: ${currentDeptObj.manager} (${currentDeptObj.name})` : 'Auto-linked to selected department'}
                     </p>
                   </div>
 
@@ -842,29 +1023,30 @@ export const EmployeesPage: React.FC = () => {
                   className="h-9"
                 />
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t">
-                <Button type="button" variant="outline" size="sm" onClick={() => setShowOnboardModal(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting} size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold px-4">
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                      Completing Onboarding...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-4 h-4 mr-1.5" />
-                      Complete Onboarding
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </div>
+            <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowOnboardModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold px-4">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Completing Onboarding...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4 mr-1.5" />
+                    Complete Onboarding
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* UBAC (User-Based Access Control) Modal */}
       {selectedEmpForUBAC && (
@@ -1108,6 +1290,220 @@ export const EmployeesPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Employee Modal */}
+      {showEditEmpModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Edit2 className="w-4 h-4 text-blue-600" />
+                  Edit Employee Profile
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Update personal details, plant allocation, department unit, reporting supervisor and status.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditEmpModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditEmp} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Full Name *</label>
+                  <Input
+                    required
+                    value={editEmpName}
+                    onChange={(e) => setEditEmpName(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Status</label>
+                  <select
+                    value={editEmpStatus}
+                    onChange={(e) => setEditEmpStatus(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Onboarding">Onboarding</option>
+                    <option value="Probation">Probation</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Official Email *</label>
+                  <Input
+                    type="email"
+                    required
+                    value={editEmpEmail}
+                    onChange={(e) => setEditEmpEmail(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Phone Number *</label>
+                  <Input
+                    required
+                    value={editEmpPhone}
+                    onChange={(e) => setEditEmpPhone(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Facility / Plant</label>
+                  <select
+                    value={editEmpPlant}
+                    onChange={(e) => setEditEmpPlant(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                  >
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.name}>
+                        {p.name} ({p.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Department</label>
+                  <select
+                    value={editEmpDept}
+                    onChange={(e) => setEditEmpDept(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                  >
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name} ({d.plant || 'All Plants'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Operational Role (RBAC)</label>
+                  <select
+                    value={editEmpRole}
+                    onChange={(e) => setEditEmpRole(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                  >
+                    {roles.map((r) => (
+                      <option key={r.id} value={r.name}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Assigned Team / Cell</label>
+                  <Input
+                    value={editEmpTeam}
+                    onChange={(e) => setEditEmpTeam(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Workstation / Machine Bench</label>
+                  <Input
+                    value={editEmpWorkstation}
+                    onChange={(e) => setEditEmpWorkstation(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Reporting Supervisor *</label>
+                  <select
+                    value={editEmpSupervisor}
+                    onChange={(e) => setEditEmpSupervisor(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                  >
+                    {employees.map((e) => (
+                      <option key={e.id} value={`${e.name} (${e.role})`}>
+                        {e.name} &bull; {e.role} ({e.plant || 'All Plants'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Skills & Certifications (Comma-separated)</label>
+                <Input
+                  value={editEmpSkills}
+                  onChange={(e) => setEditEmpSkills(e.target.value)}
+                  placeholder="e.g. SMD Soldering, Hi-Pot Testing, Final Assembly"
+                  className="h-9"
+                />
+              </div>
+
+              {/* Login PIN / Password Management */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                    Reset Employee Login PIN (6 Digits)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setEditEmpPin('123456')}
+                    className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                  >
+                    Set to Standard Default (123456)
+                  </button>
+                </div>
+                <Input
+                  type="text"
+                  maxLength={6}
+                  value={editEmpPin}
+                  onChange={(e) => setEditEmpPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Leave empty to keep existing PIN intact"
+                  className="h-9 font-mono tracking-widest font-bold text-center"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {editEmpPin ? 'New PIN will take effect immediately upon saving.' : 'Leave blank if the employee PIN should remain unchanged.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditEmpModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              >
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
     </div>
   );
 };

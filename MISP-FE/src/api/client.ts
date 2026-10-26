@@ -19,6 +19,11 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Clear all persisted store data on token expiry / unauthorized
+      localStorage.removeItem('mips_manufacturing_store_v7');
+      localStorage.removeItem('user-storage');
+      localStorage.removeItem('notification-store');
+      sessionStorage.clear();
       useUserStore.getState().logout();
     }
     return Promise.reject(error);

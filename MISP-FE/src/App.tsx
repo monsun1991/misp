@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './utils/ProtectedRoute';
+import PermissionGuard from './components/common/PermissionGuard';
 import Layout from './layouts/Layout';
 import { Loader2 } from 'lucide-react';
 
@@ -40,19 +41,19 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/finished-goods" element={<FinishedGoodsPage />} />
-            <Route path="/procurement" element={<ProcurementPage />} />
-            <Route path="/forecast" element={<ForecastPage />} />
-            <Route path="/kits" element={<KitsPage />} />
-            <Route path="/production" element={<ProductionPage />} />
-            <Route path="/orders-dispatch" element={<OrdersDispatchPage />} />
-            <Route path="/productivity" element={<ProductivityPage />} />
-            <Route path="/masters" element={<MastersPage />} />
-            <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/users" element={<UsersAccessPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/inventory" element={<PermissionGuard requiredPermissions={['inventory.view']}><InventoryPage /></PermissionGuard>} />
+            <Route path="/finished-goods" element={<PermissionGuard requiredPermissions={['finished_goods.view', 'inventory.view']}><FinishedGoodsPage /></PermissionGuard>} />
+            <Route path="/procurement" element={<PermissionGuard requiredPermissions={['procurement.view', 'procurement.po.create']}><ProcurementPage /></PermissionGuard>} />
+            <Route path="/forecast" element={<PermissionGuard requiredPermissions={['forecast.view', 'forecast.plan']}><ForecastPage /></PermissionGuard>} />
+            <Route path="/kits" element={<PermissionGuard requiredPermissions={['kits.view', 'kits.create', 'kits.issue', 'kits.reconcile']}><KitsPage /></PermissionGuard>} />
+            <Route path="/production" element={<PermissionGuard requiredPermissions={['production.view', 'production.log', 'production.plan']}><ProductionPage /></PermissionGuard>} />
+            <Route path="/orders-dispatch" element={<PermissionGuard requiredPermissions={['orders.view', 'orders.manage', 'procurement.view']}><OrdersDispatchPage /></PermissionGuard>} />
+            <Route path="/productivity" element={<PermissionGuard requiredPermissions={['productivity.view', 'production.log']}><ProductivityPage /></PermissionGuard>} />
+            <Route path="/masters" element={<PermissionGuard requiredPermissions={['masters.manage']}><MastersPage /></PermissionGuard>} />
+            <Route path="/employees" element={<PermissionGuard requiredPermissions={['users.manage']}><EmployeesPage /></PermissionGuard>} />
+            <Route path="/settings" element={<PermissionGuard requiredPermissions={['settings.manage']}><SettingsPage /></PermissionGuard>} />
+            <Route path="/users" element={<PermissionGuard requiredPermissions={['users.manage']}><UsersAccessPage /></PermissionGuard>} />
+            <Route path="/reports" element={<PermissionGuard requiredPermissions={['reports.view']}><ReportsPage /></PermissionGuard>} />
           </Route>
         </Route>
 

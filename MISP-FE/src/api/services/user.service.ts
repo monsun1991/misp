@@ -19,6 +19,14 @@ export const logoutAPI = async (_accessToken: string): Promise<any> => {
     return { success: true };
 };
 
+export const changePinAPI = async (data: { currentPin?: string; newPin: string }): Promise<any> => {
+    const response = await api.post(
+        API_ENDPOINTS.auth.changePin,
+        data
+    );
+    return response.data;
+};
+
 export const sendResetOtpAPI = async (_data: { phoneNumber: string }): Promise<any> => {
     return { success: true };
 };

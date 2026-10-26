@@ -86,72 +86,94 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
       icon: <Boxes className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Inventory',
       href: '/inventory',
+      requiredPermissions: ['inventory.view'],
     },
     {
       icon: <PackageCheck className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Finished Goods',
       href: '/finished-goods',
+      requiredPermissions: ['finished_goods.view', 'inventory.view'],
     },
     {
       icon: <Truck className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Procurement',
       href: '/procurement',
+      requiredPermissions: ['procurement.view', 'procurement.po.create'],
     },
     {
       icon: <TrendingUp className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Forecast',
       href: '/forecast',
+      requiredPermissions: ['forecast.view', 'forecast.plan'],
     },
     {
       icon: <Layers className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Kits',
       href: '/kits',
+      requiredPermissions: ['kits.view', 'kits.create', 'kits.issue', 'kits.reconcile'],
     },
     {
       icon: <Factory className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Production',
       href: '/production',
+      requiredPermissions: ['production.view', 'production.log', 'production.plan'],
     },
     {
       icon: <Send className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Dispatch & POs',
       href: '/orders-dispatch',
+      requiredPermissions: ['orders.view', 'orders.manage', 'procurement.view'],
     },
     {
       icon: <Award className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Productivity',
       href: '/productivity',
+      requiredPermissions: ['productivity.view', 'production.log'],
     },
     {
       icon: <Database className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Masters',
       href: '/masters',
+      requiredPermissions: ['masters.manage'],
     },
     {
       icon: <Users2 className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Workforce',
       href: '/employees',
+      requiredPermissions: ['users.manage'],
     },
     {
       icon: <Settings className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Settings',
       href: '/settings',
+      requiredPermissions: ['settings.manage'],
     },
     {
       icon: <FileBarChart className="h-4 w-4 md:h-5 md:w-5" />,
       label: 'Reports',
       href: '/reports',
+      requiredPermissions: ['reports.view'],
     },
   ], [whatsappCount]);
 
-  // Filter sidebar items based on route permissions only.
+  // Filter sidebar items based on route permissions and role
   const user = useUserStore((state) => state.user);
+  const isSuperAdmin = useMemo(() => {
+    const r = (user?.role || '').toLowerCase().replace(/[\s_-]+/g, '');
+    return r === 'superadmin' || r === 'admin';
+  }, [user?.role]);
+
   const sidebarItems = allSidebarItems.filter(item => {
     if (!item.href) {
       return true;
     }
-    const permissionsAllowed = user?.role === 'SuperAdmin' || !item.requiredPermissions || item.requiredPermissions.some((permission: string) => userPermissions.includes(permission));
-    return permissionsAllowed;
+    if (isSuperAdmin) {
+      return true;
+    }
+    if (!item.requiredPermissions || item.requiredPermissions.length === 0) {
+      return true;
+    }
+    return item.requiredPermissions.some((permission: string) => userPermissions.includes(permission));
   });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);

@@ -31,6 +31,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TablePagination, usePagination } from '@/components/common/TablePagination';
 
 export const FinishedGoodsPage: React.FC = () => {
   const {
@@ -38,6 +47,7 @@ export const FinishedGoodsPage: React.FC = () => {
     finishedGoodsLedger: rawLedger,
     products,
     materials: rawMaterials,
+    employees,
     selectedPlant,
     inwardToFinishedGoods,
     adjustFinishedGoodsStock,
@@ -46,6 +56,11 @@ export const FinishedGoodsPage: React.FC = () => {
 
   const finishedGoods = (rawFinishedGoods || []).filter((fg) => isPlantMatch(fg.plant, selectedPlant));
   const ledger = (rawLedger || []).filter((l) => isPlantMatch(l.plant, selectedPlant));
+
+  const authorizedEmployees = useMemo(() => {
+    const plantEmps = (employees || []).filter((e) => isPlantMatch(e.plant, selectedPlant));
+    return plantEmps.length > 0 ? plantEmps : (employees || []);
+  }, [employees, selectedPlant]);
 
   // Dynamic warehouses collected from finished goods, raw materials, and standard zones
   const dynamicWarehouses = useMemo(() => {
@@ -70,6 +85,15 @@ export const FinishedGoodsPage: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [warehouseFilter, setWarehouseFilter] = useState('All');
+  const [wattageFilter, setWattageFilter] = useState('All');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Ledger Filter State
+  const [ledgerSearch, setLedgerSearch] = useState('');
+  const [ledgerTxFilter, setLedgerTxFilter] = useState('All');
+  const [ledgerStartDate, setLedgerStartDate] = useState('');
+  const [ledgerEndDate, setLedgerEndDate] = useState('');
 
   // Modals
   const [showInwardModal, setShowInwardModal] = useState(false);
@@ -85,12 +109,13 @@ export const FinishedGoodsPage: React.FC = () => {
   const [isCustomWarehouse, setIsCustomWarehouse] = useState(false);
   const [customWarehouseName, setCustomWarehouseName] = useState('');
   const [inwardStatus, setInwardStatus] = useState<FinishedGoodItem['status']>('Ready for Dispatch');
+  const [inwardOfficer, setInwardOfficer] = useState<string>('Ramesh Sharma (Store Manager)');
   const [inwardNotes, setInwardNotes] = useState<string>('Manual packaging inward verified by QA');
 
   // Adjustment Form State
   const [adjDelta, setAdjDelta] = useState<number>(0);
   const [adjReason, setAdjReason] = useState<string>('');
-  const [adjUser, setAdjUser] = useState<string>('Store & FGS Incharge');
+  const [adjUser, setAdjUser] = useState<string>('Ramesh Sharma (Store Manager)');
 
   // Calculation of KPIs
   const totalUnits = finishedGoods.reduce((sum, item) => sum + item.quantityOnHand, 0);
@@ -100,20 +125,79 @@ export const FinishedGoodsPage: React.FC = () => {
   const quarantinedUnits = finishedGoods.filter((i) => i.status === 'Quarantine' || i.status === 'Under QC').reduce((sum, i) => sum + i.quantityOnHand, 0);
 
   // Filtered List
-  const filteredItems = finishedGoods.filter((item) => {
-    const q = searchTerm.toLowerCase();
-    const matchesSearch =
-      item.productName.toLowerCase().includes(q) ||
-      item.productCode.toLowerCase().includes(q) ||
-      item.batchLotNumber.toLowerCase().includes(q) ||
-      (item.kitNumber && item.kitNumber.toLowerCase().includes(q));
+  const filteredItems = React.useMemo(() => {
+    return finishedGoods.filter((item) => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        !q ||
+        item.productName.toLowerCase().includes(q) ||
+        item.productCode.toLowerCase().includes(q) ||
+        item.batchLotNumber.toLowerCase().includes(q) ||
+        (item.kitNumber && item.kitNumber.toLowerCase().includes(q));
 
-    const matchesCat = categoryFilter === 'All' || item.category === categoryFilter;
-    const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
-    const matchesWarehouse = warehouseFilter === 'All' || item.warehouse === warehouseFilter;
+      const matchesCat = categoryFilter === 'All' || item.category === categoryFilter;
+      const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
+      const matchesWarehouse = warehouseFilter === 'All' || item.warehouse === warehouseFilter;
+      const matchesWattage = wattageFilter === 'All' || item.wattage === wattageFilter;
 
-    return matchesSearch && matchesCat && matchesStatus && matchesWarehouse;
-  });
+      const prodDate = item.productionDate ? item.productionDate.split('T')[0] : '';
+      const matchesDate =
+        (!startDate || prodDate >= startDate) &&
+        (!endDate || prodDate <= endDate);
+
+      return matchesSearch && matchesCat && matchesStatus && matchesWarehouse && matchesWattage && matchesDate;
+    });
+  }, [finishedGoods, searchTerm, categoryFilter, statusFilter, warehouseFilter, wattageFilter, startDate, endDate]);
+
+  const filteredLedger = React.useMemo(() => {
+    return ledger.filter((entry) => {
+      const q = ledgerSearch.toLowerCase();
+      const matchesSearch =
+        !q ||
+        entry.productName.toLowerCase().includes(q) ||
+        entry.productCode.toLowerCase().includes(q) ||
+        entry.batchLotNumber.toLowerCase().includes(q) ||
+        (entry.referenceNo && entry.referenceNo.toLowerCase().includes(q)) ||
+        (entry.notes && entry.notes.toLowerCase().includes(q));
+
+      const matchesTx = ledgerTxFilter === 'All' || entry.transactionType === ledgerTxFilter;
+
+      const entryDate = entry.date ? entry.date.split('T')[0] : '';
+      const matchesDate =
+        (!ledgerStartDate || entryDate >= ledgerStartDate) &&
+        (!ledgerEndDate || entryDate <= ledgerEndDate);
+
+      return matchesSearch && matchesTx && matchesDate;
+    });
+  }, [ledger, ledgerSearch, ledgerTxFilter, ledgerStartDate, ledgerEndDate]);
+
+  const {
+    currentPage: fgPage,
+    setCurrentPage: setFgPage,
+    pageSize: fgPageSize,
+    setPageSize: setFgPageSize,
+    totalItems: totalFgItems,
+    totalPages: totalFgPages,
+    paginatedItems: paginatedItems,
+  } = usePagination(filteredItems, 10);
+
+  const {
+    currentPage: ledgerPage,
+    setCurrentPage: setLedgerPage,
+    pageSize: ledgerPageSize,
+    setPageSize: setLedgerPageSize,
+    totalItems: totalLedgerItems,
+    totalPages: totalLedgerPages,
+    paginatedItems: paginatedLedger,
+  } = usePagination(filteredLedger, 10);
+
+  React.useEffect(() => {
+    setFgPage(1);
+  }, [searchTerm, categoryFilter, statusFilter, warehouseFilter, wattageFilter, startDate, endDate]);
+
+  React.useEffect(() => {
+    setLedgerPage(1);
+  }, [ledgerSearch, ledgerTxFilter, ledgerStartDate, ledgerEndDate]);
 
   const getAgingBadge = (prodDateStr: string) => {
     try {
@@ -176,7 +260,7 @@ export const FinishedGoodsPage: React.FC = () => {
         status: inwardStatus,
         notes: inwardNotes
       },
-      'FGS Store Incharge'
+      inwardOfficer
     );
 
     setShowInwardModal(false);
@@ -332,42 +416,90 @@ export const FinishedGoodsPage: React.FC = () => {
 
               {/* Filters */}
               <div className="flex items-center gap-2 flex-wrap">
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="h-8 text-xs bg-slate-50 dark:bg-slate-900 border rounded-lg px-2 text-slate-700 dark:text-slate-300"
-                >
-                  <option value="All">All Categories</option>
-                  <option value="LED Bulbs">LED Bulbs</option>
-                  <option value="Battens">Battens</option>
-                  <option value="Downlights">Downlights</option>
-                  <option value="Floodlights">Floodlights</option>
-                </select>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Categories</SelectItem>
+                    <SelectItem value="LED Bulbs">LED Bulbs</SelectItem>
+                    <SelectItem value="Battens">Battens</SelectItem>
+                    <SelectItem value="Downlights">Downlights</SelectItem>
+                    <SelectItem value="Floodlights">Floodlights</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-8 text-xs bg-slate-50 dark:bg-slate-900 border rounded-lg px-2 text-slate-700 dark:text-slate-300"
-                >
-                  <option value="All">All QA Statuses</option>
-                  <option value="Ready for Dispatch">Ready for Dispatch</option>
-                  <option value="Under QC">Under QC</option>
-                  <option value="Quarantine">Quarantine</option>
-                  <option value="Depleted">Depleted</option>
-                </select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[145px] h-8 text-xs">
+                    <SelectValue placeholder="All QA Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All QA Statuses</SelectItem>
+                    <SelectItem value="Ready for Dispatch">Ready for Dispatch</SelectItem>
+                    <SelectItem value="Under QC">Under QC</SelectItem>
+                    <SelectItem value="Quarantine">Quarantine</SelectItem>
+                    <SelectItem value="Depleted">Depleted</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
-                  value={warehouseFilter}
-                  onChange={(e) => setWarehouseFilter(e.target.value)}
-                  className="h-8 text-xs bg-slate-50 dark:bg-slate-900 border rounded-lg px-2 text-slate-700 dark:text-slate-300"
-                >
-                  <option value="All">All Warehouses ({dynamicWarehouses.length})</option>
-                  {dynamicWarehouses.map((wh) => (
-                    <option key={wh} value={wh}>
-                      {wh}
-                    </option>
-                  ))}
-                </select>
+                <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+                  <SelectTrigger className="w-[155px] h-8 text-xs">
+                    <SelectValue placeholder="All Warehouses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Warehouses ({dynamicWarehouses.length})</SelectItem>
+                    {dynamicWarehouses.map((wh) => (
+                      <SelectItem key={wh} value={wh}>
+                        {wh}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={wattageFilter} onValueChange={setWattageFilter}>
+                  <SelectTrigger className="w-[125px] h-8 text-xs">
+                    <SelectValue placeholder="All Wattages" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Wattages</SelectItem>
+                    <SelectItem value="5W">5W</SelectItem>
+                    <SelectItem value="9W">9W</SelectItem>
+                    <SelectItem value="12W">12W</SelectItem>
+                    <SelectItem value="15W">15W</SelectItem>
+                    <SelectItem value="20W">20W</SelectItem>
+                    <SelectItem value="50W">50W</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <DatePicker
+                    value={startDate}
+                    onChange={setStartDate}
+                    placeholder="Start date"
+                    className="w-32"
+                  />
+                  <span className="text-slate-400 text-[10px]">to</span>
+                  <DatePicker
+                    value={endDate}
+                    onChange={setEndDate}
+                    placeholder="End date"
+                    className="w-32"
+                  />
+                  {(startDate || endDate) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStartDate('');
+                        setEndDate('');
+                      }}
+                      className="h-8 px-2 text-xs text-rose-500 hover:text-rose-700"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -396,7 +528,7 @@ export const FinishedGoodsPage: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredItems.map((item) => (
+                    paginatedItems.map((item) => (
                       <tr
                         key={item.id}
                         className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
@@ -518,19 +650,87 @@ export const FinishedGoodsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              currentPage={fgPage}
+              totalPages={totalFgPages}
+              totalItems={totalFgItems}
+              pageSize={fgPageSize}
+              onPageChange={setFgPage}
+              onPageSizeChange={setFgPageSize}
+            />
           </CardContent>
         </Card>
       ) : (
         /* Ledger View */
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <History className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
-              Finished Goods Movement Ledger (Audit Trail)
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Every production inward from completed assembly kits and outward deduction for customer dispatches.
-            </CardDescription>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <History className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
+                  Finished Goods Movement Ledger (Audit Trail)
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Every production inward from completed assembly kits and outward deduction for customer dispatches.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 max-w-xs">
+                  <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <Input
+                    placeholder="Search product, ref doc, batch..."
+                    value={ledgerSearch}
+                    onChange={(e) => setLedgerSearch(e.target.value)}
+                    className="h-8 text-xs w-44"
+                  />
+                </div>
+
+                <Select value={ledgerTxFilter} onValueChange={setLedgerTxFilter}>
+                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Types</SelectItem>
+                    <SelectItem value="Production Inward">Production Inward</SelectItem>
+                    <SelectItem value="Customer Dispatch">Customer Dispatch</SelectItem>
+                    <SelectItem value="Manual Inward">Manual Inward</SelectItem>
+                    <SelectItem value="Adjustment (+)">Adjustment (+)</SelectItem>
+                    <SelectItem value="Adjustment (-)">Adjustment (-)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <DatePicker
+                    value={ledgerStartDate}
+                    onChange={setLedgerStartDate}
+                    placeholder="Start date"
+                    className="w-32"
+                  />
+                  <span className="text-slate-400 text-[10px]">to</span>
+                  <DatePicker
+                    value={ledgerEndDate}
+                    onChange={setLedgerEndDate}
+                    placeholder="End date"
+                    className="w-32"
+                  />
+                  {(ledgerStartDate || ledgerEndDate) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setLedgerStartDate('');
+                        setLedgerEndDate('');
+                      }}
+                      className="h-8 px-2 text-xs text-rose-500 hover:text-rose-700"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -549,14 +749,14 @@ export const FinishedGoodsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {ledger.length === 0 ? (
+                  {filteredLedger.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-8 text-center text-slate-500">
-                        No finished goods transactions recorded yet.
+                        No finished goods transactions found matching your criteria.
                       </td>
                     </tr>
                   ) : (
-                    ledger.map((entry) => (
+                    paginatedLedger.map((entry) => (
                       <tr key={entry.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
                         <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">{entry.date}</td>
                         <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-slate-100">
@@ -607,14 +807,22 @@ export const FinishedGoodsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              currentPage={ledgerPage}
+              totalPages={totalLedgerPages}
+              totalItems={totalLedgerItems}
+              pageSize={ledgerPageSize}
+              onPageChange={setLedgerPage}
+              onPageSizeChange={setLedgerPageSize}
+            />
           </CardContent>
         </Card>
       )}
 
       {/* Manual Inward Modal */}
       {showInwardModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <PlusCircle className="w-5 h-5 text-[#84cc16]" />
@@ -735,6 +943,31 @@ export const FinishedGoodsPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                  Inward Verifier / Store Incharge *
+                </label>
+                <select
+                  value={inwardOfficer}
+                  onChange={(e) => setInwardOfficer(e.target.value)}
+                  className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                  required
+                >
+                  {authorizedEmployees.map((emp) => (
+                    <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                      {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                    </option>
+                  ))}
+                  {authorizedEmployees.length === 0 && (
+                    <>
+                      <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
+                      <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
+                      <option value="System Super Admin">System Super Admin</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                   Inspection Notes & Traceability Details
                 </label>
                 <Input
@@ -768,8 +1001,8 @@ export const FinishedGoodsPage: React.FC = () => {
 
       {/* Stock Adjustment Modal */}
       {showAdjModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <ArrowUpDown className="w-5 h-5 text-[#146b68] dark:text-[#84cc16]" />
@@ -818,12 +1051,25 @@ export const FinishedGoodsPage: React.FC = () => {
                 <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                   Authorized Person *
                 </label>
-                <Input
+                <select
                   value={adjUser}
                   onChange={(e) => setAdjUser(e.target.value)}
+                  className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
                   required
-                  className="h-9"
-                />
+                >
+                  {authorizedEmployees.map((emp) => (
+                    <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                      {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                    </option>
+                  ))}
+                  {authorizedEmployees.length === 0 && (
+                    <>
+                      <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
+                      <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
+                      <option value="System Super Admin">System Super Admin</option>
+                    </>
+                  )}
+                </select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -849,8 +1095,8 @@ export const FinishedGoodsPage: React.FC = () => {
 
       {/* Lot Traceability Modal */}
       {selectedTraceItem && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-[#84cc16]" />

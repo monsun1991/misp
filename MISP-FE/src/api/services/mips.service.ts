@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '@/api/axiosInstance';
 import { API_ENDPOINTS } from '../endpoints';
 
 export interface BackendUser {
@@ -16,6 +16,8 @@ export interface BackendUser {
   supervisor?: string;
   status?: string;
   skills?: string;
+  pin?: string;
+  password?: string;
   customPermissions?: string[];
   revokedPermissions?: string[];
   customPermissionsJson?: string;
@@ -27,7 +29,7 @@ export interface BackendUser {
 export const mipsService = {
   getUsers: async (): Promise<BackendUser[]> => {
     try {
-      const res = await axios.get(API_ENDPOINTS.mips.users);
+      const res = await api.get(API_ENDPOINTS.mips.users);
       return res.data?.data || [];
     } catch (error) {
       console.warn('Failed to fetch users from backend, fallback empty', error);
@@ -36,16 +38,16 @@ export const mipsService = {
   },
 
   createUser: async (user: Partial<BackendUser>): Promise<BackendUser> => {
-    const res = await axios.post(API_ENDPOINTS.mips.users, user);
+    const res = await api.post(API_ENDPOINTS.mips.users, user);
     return res.data?.data;
   },
 
   deleteUser: async (id: string): Promise<void> => {
-    await axios.delete(`${API_ENDPOINTS.mips.users}/${id}`);
+    await api.delete(`${API_ENDPOINTS.mips.users}/${id}`);
   },
 
   updateUser: async (id: string, user: Partial<BackendUser>): Promise<BackendUser> => {
-    const res = await axios.put(`${API_ENDPOINTS.mips.users}/${id}`, user);
+    const res = await api.put(`${API_ENDPOINTS.mips.users}/${id}`, user);
     return res.data?.data;
   }
 };

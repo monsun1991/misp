@@ -18,6 +18,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TablePagination, usePagination } from '@/components/common/TablePagination';
 
 export const KitsPage: React.FC = () => {
   const {
@@ -37,7 +46,6 @@ export const KitsPage: React.FC = () => {
   const employees = rawEmployees.filter((e) => isPlantMatch(e.plant, selectedPlant));
 
   const [activeTab, setActiveTab] = useState<'kits' | 'employeeLedger'>('kits');
-  const [searchTerm, setSearchTerm] = useState('');
 
   // New Kit Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -202,6 +210,61 @@ export const KitsPage: React.FC = () => {
 
   const employeeLedger = Object.values(employeeMap);
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [wattageFilter, setWattageFilter] = useState('All');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const filteredKits = React.useMemo(() => {
+    return kits.filter((kit) => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        !q ||
+        kit.kitNumber.toLowerCase().includes(q) ||
+        kit.productName.toLowerCase().includes(q) ||
+        kit.assignedEmployee.toLowerCase().includes(q) ||
+        kit.supervisor.toLowerCase().includes(q) ||
+        kit.department.toLowerCase().includes(q);
+
+      const matchesStatus = statusFilter === 'All' || kit.status === statusFilter;
+
+      const prod = products.find((p) => p.id === kit.productId || p.name === kit.productName);
+      const matchesWattage = wattageFilter === 'All' || (prod && prod.wattage === wattageFilter);
+
+      const kDate = kit.createdDate ? kit.createdDate.split('T')[0] : '';
+      const matchesDate =
+        (!startDate || kDate >= startDate) &&
+        (!endDate || kDate <= endDate);
+
+      return matchesSearch && matchesStatus && matchesWattage && matchesDate;
+    });
+  }, [kits, products, searchTerm, statusFilter, wattageFilter, startDate, endDate]);
+
+  const {
+    currentPage: kitPage,
+    setCurrentPage: setKitPage,
+    pageSize: kitPageSize,
+    setPageSize: setKitPageSize,
+    totalItems: totalKitItems,
+    totalPages: totalKitPages,
+    paginatedItems: paginatedKits,
+  } = usePagination(filteredKits, 5);
+
+  React.useEffect(() => {
+    setKitPage(1);
+  }, [searchTerm, statusFilter, wattageFilter, startDate, endDate]);
+
+  const {
+    currentPage: empLedgerPage,
+    setCurrentPage: setEmpLedgerPage,
+    pageSize: empLedgerPageSize,
+    setPageSize: setEmpLedgerPageSize,
+    totalItems: totalEmpLedgerItems,
+    totalPages: totalEmpLedgerPages,
+    paginatedItems: paginatedEmpLedger,
+  } = usePagination(employeeLedger, 5);
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
@@ -322,14 +385,93 @@ export const KitsPage: React.FC = () => {
       {activeTab === 'kits' && (
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Production Kits Registry</CardTitle>
-            <CardDescription>
-              BRD Rule: Issued Quantity = Consumed Quantity + Returned Quantity + Approved Wastage.
-            </CardDescription>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-semibold">Production Kits Registry</CardTitle>
+                <CardDescription>
+                  BRD Rule: Issued Quantity = Consumed Quantity + Returned Quantity + Approved Wastage.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 max-w-xs">
+                  <Input
+                    placeholder="Search kit#, product, staff..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-8 text-xs w-44"
+                  />
+                </div>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[145px] h-8 text-xs">
+                    <SelectValue placeholder="All Kit Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Kit Statuses</SelectItem>
+                    <SelectItem value="Draft">Draft</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Issued">Issued</SelectItem>
+                    <SelectItem value="In Production">In Production</SelectItem>
+                    <SelectItem value="Reconciled">Reconciled</SelectItem>
+                    <SelectItem value="Closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={wattageFilter} onValueChange={setWattageFilter}>
+                  <SelectTrigger className="w-[125px] h-8 text-xs">
+                    <SelectValue placeholder="All Wattages" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Wattages</SelectItem>
+                    <SelectItem value="5W">5W</SelectItem>
+                    <SelectItem value="9W">9W</SelectItem>
+                    <SelectItem value="12W">12W</SelectItem>
+                    <SelectItem value="15W">15W</SelectItem>
+                    <SelectItem value="20W">20W</SelectItem>
+                    <SelectItem value="50W">50W</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="flex items-center gap-1.5 text-xs">
+                  <DatePicker
+                    value={startDate}
+                    onChange={setStartDate}
+                    placeholder="Start date"
+                    className="w-32"
+                  />
+                  <span className="text-slate-400 text-[10px]">to</span>
+                  <DatePicker
+                    value={endDate}
+                    onChange={setEndDate}
+                    placeholder="End date"
+                    className="w-32"
+                  />
+                  {(startDate || endDate) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStartDate('');
+                        setEndDate('');
+                      }}
+                      className="h-8 px-2 text-xs text-rose-500 hover:text-rose-700"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {kits.map((kit) => {
+              {filteredKits.length === 0 && (
+                <div className="p-8 text-center text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed">
+                  No production kits found matching your criteria.
+                </div>
+              )}
+              {paginatedKits.map((kit) => {
                 const totalIssued = kit.items.reduce((acc, i) => acc + i.totalIssuedQty, 0);
                 const totalConsumed = kit.items.reduce((acc, i) => acc + i.consumedQty, 0);
                 const totalReturned = kit.items.reduce((acc, i) => acc + i.returnedQty, 0);
@@ -465,6 +607,15 @@ export const KitsPage: React.FC = () => {
                 );
               })}
             </div>
+            <TablePagination
+              currentPage={kitPage}
+              totalPages={totalKitPages}
+              totalItems={totalKitItems}
+              pageSize={kitPageSize}
+              pageSizeOptions={[5, 10, 20]}
+              onPageChange={setKitPage}
+              onPageSizeChange={setKitPageSize}
+            />
           </CardContent>
         </Card>
       )}
@@ -482,7 +633,7 @@ export const KitsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {employeeLedger.map((emp, idx) => (
+              {paginatedEmpLedger.map((emp, idx) => (
                 <div
                   key={idx}
                   className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3"
@@ -551,124 +702,137 @@ export const KitsPage: React.FC = () => {
                 </div>
               ))}
             </div>
+            <TablePagination
+              currentPage={empLedgerPage}
+              totalPages={totalEmpLedgerPages}
+              totalItems={totalEmpLedgerItems}
+              pageSize={empLedgerPageSize}
+              pageSizeOptions={[4, 6, 10, 20]}
+              onPageChange={setEmpLedgerPage}
+              onPageSizeChange={setEmpLedgerPageSize}
+            />
           </CardContent>
         </Card>
       )}
 
       {/* Create Kit Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
                 Generate Production Kit from BOM
               </h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
                 &times;
               </button>
             </div>
 
-            <form onSubmit={handleCreateKitSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold mb-1">Select Product to Assemble</label>
-                <select
-                  value={selectedProdId}
-                  onChange={(e) => setSelectedProdId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.code} - {p.name} ({p.wattage})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleCreateKitSubmit} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
                 <div>
-                  <label className="block font-semibold mb-1">Batch Output Quantity</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    required
-                    value={batchQty}
-                    onChange={(e) => setBatchQty(Number(e.target.value))}
-                    className="h-9 font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Production Department</label>
+                  <label className="block font-semibold mb-1">Select Product to Assemble</label>
                   <select
-                    value={departmentName}
-                    onChange={(e) => setDepartmentName(e.target.value)}
+                    value={selectedProdId}
+                    onChange={(e) => setSelectedProdId(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
                   >
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.name}>
-                        {dept.name} ({dept.plant})
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.code} - {p.name} ({p.wattage})
                       </option>
                     ))}
                   </select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold mb-1">Assign to Operator / Worker</label>
-                  <select
-                    value={assignedWorker}
-                    onChange={(e) => {
-                      setAssignedWorker(e.target.value);
-                      const emp = employees.find((x) => x.name === e.target.value);
-                      if (emp?.department) setDepartmentName(emp.department);
-                      if (emp?.supervisor) setSupervisorName(emp.supervisor);
-                    }}
-                    required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                  >
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.name}>
-                        {emp.name} &bull; {emp.role} ({emp.department})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Responsible Supervisor</label>
-                  <select
-                    value={supervisorName}
-                    onChange={(e) => setSupervisorName(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                  >
-                    {employees
-                      .filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin'))
-                      .map((sup) => (
-                        <option key={sup.id} value={`${sup.name} (${sup.role})`}>
-                          {sup.name} ({sup.role})
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Batch Output Quantity</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      required
+                      value={batchQty}
+                      onChange={(e) => setBatchQty(Number(e.target.value))}
+                      className="h-9 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Production Department</label>
+                    <select
+                      value={departmentName}
+                      onChange={(e) => setDepartmentName(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    >
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.name}>
+                          {dept.name} ({dept.plant})
                         </option>
                       ))}
-                    <option value="Suresh Patil (Supervisor)">Suresh Patil (Supervisor)</option>
-                    <option value="Anand Deshmukh (Production Manager)">Anand Deshmukh (Production Manager)</option>
-                  </select>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Assign to Operator / Worker</label>
+                    <select
+                      value={assignedWorker}
+                      onChange={(e) => {
+                        setAssignedWorker(e.target.value);
+                        const emp = employees.find((x) => x.name === e.target.value);
+                        if (emp?.department) setDepartmentName(emp.department);
+                        if (emp?.supervisor) setSupervisorName(emp.supervisor);
+                      }}
+                      required
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    >
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.name}>
+                          {emp.name} &bull; {emp.role} ({emp.department})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Responsible Supervisor</label>
+                    <select
+                      value={supervisorName}
+                      onChange={(e) => setSupervisorName(e.target.value)}
+                      required
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    >
+                      {employees
+                        .filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin'))
+                        .map((sup) => (
+                          <option key={sup.id} value={`${sup.name} (${sup.role})`}>
+                            {sup.name} ({sup.role})
+                          </option>
+                        ))}
+                      {employees.filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin')).length === 0 && (
+                        <option value="Supervisor">Supervisor</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Automatic BOM preview */}
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border space-y-1">
+                  <div className="font-semibold text-slate-700 dark:text-slate-300">
+                    Materials To Be Issued ({batchQty} units BOM multiplier):
+                  </div>
+                  <ul className="list-disc pl-4 text-[11px] text-slate-500 space-y-0.5">
+                    {selectedProduct.bom.map((b) => (
+                      <li key={b.materialId}>
+                        {b.materialName}: <strong>{b.qtyPerUnit * batchQty} {b.uom}</strong> (BOM: {b.qtyPerUnit}/unit)
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
 
-              {/* Automatic BOM preview */}
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border space-y-1">
-                <div className="font-semibold text-slate-700 dark:text-slate-300">
-                  Materials To Be Issued ({batchQty} units BOM multiplier):
-                </div>
-                <ul className="list-disc pl-4 text-[11px] text-slate-500 space-y-0.5">
-                  {selectedProduct.bom.map((b) => (
-                    <li key={b.materialId}>
-                      {b.materialName}: <strong>{b.qtyPerUnit * batchQty} {b.uom}</strong> (BOM: {b.qtyPerUnit}/unit)
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateModal(false)}>
                   Cancel
                 </Button>
@@ -683,165 +847,163 @@ export const KitsPage: React.FC = () => {
 
       {/* Reconcile & Close Modal */}
       {reconcileKit && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-xl w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
                   Kit Material Reconciliation & Closure
                 </h2>
                 <p className="text-[11px] text-slate-500">
-                  Kit {reconcileKit.kitNumber} &bull; Worker: {reconcileKit.assignedEmployee}
+                  {reconcileKit.kitNumber} &bull; {reconcileKit.productName} ({reconcileKit.plannedBatchQty} units planned)
                 </p>
               </div>
-              <button onClick={() => setReconcileKit(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setReconcileKit(null)} className="text-slate-400 hover:text-slate-600 text-lg">
                 &times;
               </button>
             </div>
 
-            {reconcileError && (
-              <div className="p-2.5 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-semibold">
-                {reconcileError}
-              </div>
-            )}
+            <form onSubmit={handleReconcileSubmit} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+                {reconcileError && (
+                  <div className="p-2.5 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs">
+                    {reconcileError}
+                  </div>
+                )}
 
-            <form onSubmit={handleReconcileSubmit} className="space-y-4 text-xs">
-              <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-                {reconcileKit.items.map((item) => {
-                  const currentInp = consumptionInputs[item.materialId] || { consumed: 0, returned: 0, wastage: 0 };
-                  const sum = currentInp.consumed + currentInp.returned + currentInp.wastage;
-                  const delta = item.totalIssuedQty - sum;
+                <div className="space-y-3">
+                  {reconcileKit.items.map((item) => {
+                    const issued = item.totalIssuedQty ?? item.issuedQty ?? 0;
+                    const currentInp = consumptionInputs[item.materialId] || {
+                      consumed: issued,
+                      returned: 0,
+                      wastage: 0,
+                    };
+                    const totalAccounted = currentInp.consumed + currentInp.returned + currentInp.wastage;
+                    const delta = issued - totalAccounted;
 
-                  return (
-                    <div key={item.materialId} className="p-3 rounded-lg border bg-slate-50/50 dark:bg-slate-800/50 space-y-2">
-                      <div className="flex items-center justify-between font-semibold">
-                        <span>{item.materialName}</span>
-                        <span>Issued: {item.totalIssuedQty}</span>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10px] text-slate-500 block">Consumed (Output)</label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={currentInp.consumed}
-                            onChange={(e) => {
-                              const val = Number(e.target.value);
-                              setConsumptionInputs({
-                                ...consumptionInputs,
-                                [item.materialId]: { ...currentInp, consumed: val },
-                              });
-                            }}
-                            className="h-7 text-xs"
-                          />
+                    return (
+                      <div key={item.materialId} className="p-3 rounded-lg border bg-slate-50 dark:bg-slate-800/50 space-y-2">
+                        <div className="flex items-center justify-between font-semibold">
+                          <span>{item.materialName}</span>
+                          <span className="text-blue-600">Issued: {issued} {item.uom || 'Pcs'}</span>
                         </div>
 
-                        <div>
-                          <label className="text-[10px] text-slate-500 block">Returned (Unused)</label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={currentInp.returned}
-                            onChange={(e) => {
-                              const val = Number(e.target.value);
-                              setConsumptionInputs({
-                                ...consumptionInputs,
-                                [item.materialId]: { ...currentInp, returned: val },
-                              });
-                            }}
-                            className="h-7 text-xs"
-                          />
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-[10px] text-slate-500 block">Consumed (Output)</label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={currentInp.consumed}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setConsumptionInputs({
+                                  ...consumptionInputs,
+                                  [item.materialId]: { ...currentInp, consumed: val },
+                                });
+                              }}
+                              className="h-7 text-xs font-semibold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-slate-500 block">Returned (Unused)</label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={currentInp.returned}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setConsumptionInputs({
+                                  ...consumptionInputs,
+                                  [item.materialId]: { ...currentInp, returned: val },
+                                });
+                              }}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-slate-500 block">Wastage / Scrap</label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={currentInp.wastage}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setConsumptionInputs({
+                                  ...consumptionInputs,
+                                  [item.materialId]: { ...currentInp, wastage: val },
+                                });
+                              }}
+                              className="h-7 text-xs"
+                            />
+                          </div>
                         </div>
 
-                        <div>
-                          <label className="text-[10px] text-slate-500 block">Wastage / Scrap</label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={currentInp.wastage}
-                            onChange={(e) => {
-                              const val = Number(e.target.value);
-                              setConsumptionInputs({
-                                ...consumptionInputs,
-                                [item.materialId]: { ...currentInp, wastage: val },
-                              });
-                            }}
-                            className="h-7 text-xs"
-                          />
+                        <div className="text-[10px] flex items-center justify-between">
+                          <span>Reconciliation Check:</span>
+                          {delta === 0 ? (
+                            <span className="text-emerald-600 font-bold">100% Balanced</span>
+                          ) : (
+                            <span className="text-red-500 font-bold">Discrepancy: {delta} units</span>
+                          )}
                         </div>
                       </div>
-
-                      <div className="text-[10px] flex items-center justify-between">
-                        <span>Reconciliation Check:</span>
-                        {delta === 0 ? (
-                          <span className="text-emerald-600 font-bold">100% Balanced</span>
-                        ) : (
-                          <span className="text-red-500 font-bold">Discrepancy: {delta} units</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Net Output Projection Formula Card */}
-              {reconcileKit && (
-                <div className="p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs space-y-1">
-                  <div className="font-semibold text-emerald-900 dark:text-emerald-200 flex justify-between">
-                    <span>Accountability & Net Production Calculation:</span>
-                    <span className="font-bold">
-                      Expected Output: {reconcileKit.plannedBatchQty.toLocaleString()} units
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between">
-                    <span>Max Defective / Scrapped Sub-items:</span>
-                    <span className="text-red-500 font-bold">
-                      {Math.max(...Object.values(consumptionInputs).map((ci) => ci.wastage || 0), 0)} defective parts
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-800 dark:text-slate-200 flex items-center justify-between pt-1 border-t border-emerald-200 dark:border-emerald-800">
-                    <span className="font-bold">Net Finished Goods Created:</span>
-                    <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-sm">
-                      {Math.max(
-                        0,
-                        reconcileKit.plannedBatchQty -
-                          Math.max(...Object.values(consumptionInputs).map((ci) => ci.wastage || 0), 0)
-                      ).toLocaleString()}{' '}
-                      units
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
-                    Rule: {reconcileKit.plannedBatchQty} expected &minus;{' '}
-                    {Math.max(...Object.values(consumptionInputs).map((ci) => ci.wastage || 0), 0)} defects =&gt;{' '}
-                    {Math.max(
-                      0,
-                      reconcileKit.plannedBatchQty -
-                        Math.max(...Object.values(consumptionInputs).map((ci) => ci.wastage || 0), 0)
-                    )}{' '}
-                    finished items
-                  </div>
+                    );
+                  })}
                 </div>
-              )}
 
-              <div>
-                <label className="block font-semibold mb-1">
-                  Supervisor Sign-Off / Adjustment Justification
-                </label>
-                <textarea
-                  rows={2}
-                  value={supervisorNotes}
-                  onChange={(e) => setSupervisorNotes(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                  placeholder="Enter remarks explaining returns or scrap approvals..."
-                />
+                {/* Net Output Projection Formula Card */}
+                {reconcileKit && (
+                  <div className="p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs space-y-1">
+                    <div className="font-semibold text-emerald-900 dark:text-emerald-200 flex justify-between">
+                      <span>Accountability & Net Production Calculation:</span>
+                      <span className="font-bold">
+                        Expected Output: {reconcileKit.plannedBatchQty.toLocaleString()} units
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                      <span>Max Defective / Scrapped Sub-items:</span>
+                      <span className="text-red-500 font-bold">
+                        {Math.max(...Object.values(consumptionInputs).map((ci) => ci.wastage || 0), 0)} defective parts
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-800 dark:text-slate-200 flex items-center justify-between pt-1 border-t border-emerald-200 dark:border-emerald-800">
+                      <span className="font-bold">Net Finished Goods Created:</span>
+                      <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-sm">
+                        {Math.max(
+                          0,
+                          reconcileKit.plannedBatchQty -
+                            Math.max(...Object.values(consumptionInputs).map((ci) => ci.wastage || 0), 0)
+                        ).toLocaleString()}{' '}
+                        units
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block font-semibold mb-1">
+                    Supervisor Sign-Off / Adjustment Justification
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={supervisorNotes}
+                    onChange={(e) => setSupervisorNotes(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    placeholder="Enter remarks explaining returns or scrap approvals..."
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setReconcileKit(null)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
                   Reconcile & Close Kit
                 </Button>
               </div>

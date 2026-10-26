@@ -15,11 +15,64 @@ import { useMipsStore } from '@/store/useMipsStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TablePagination, usePagination } from '@/components/common/TablePagination';
 
 export const ReportsPage: React.FC = () => {
   const { auditLogs, materials, purchaseOrders, kits, productionLogs } = useMipsStore();
 
   const [activeTab, setActiveTab] = useState<'audit' | 'summary'>('audit');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [moduleFilter, setModuleFilter] = useState('All');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const dynamicModules = React.useMemo(() => {
+    return Array.from(new Set(auditLogs.map((l) => l.module).filter(Boolean)));
+  }, [auditLogs]);
+
+  const filteredAuditLogs = React.useMemo(() => {
+    return auditLogs.filter((log) => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        !q ||
+        log.user.toLowerCase().includes(q) ||
+        log.action.toLowerCase().includes(q) ||
+        log.details.toLowerCase().includes(q) ||
+        log.module.toLowerCase().includes(q);
+
+      const matchesModule = moduleFilter === 'All' || log.module === moduleFilter;
+
+      const logDate = log.timestamp ? log.timestamp.split(' ')[0] : '';
+      const matchesDate =
+        (!startDate || logDate >= startDate) &&
+        (!endDate || logDate <= endDate);
+
+      return matchesSearch && matchesModule && matchesDate;
+    });
+  }, [auditLogs, searchTerm, moduleFilter, startDate, endDate]);
+
+  const {
+    currentPage: auditPage,
+    setCurrentPage: setAuditPage,
+    pageSize: auditPageSize,
+    setPageSize: setAuditPageSize,
+    totalItems: totalAuditItems,
+    totalPages: totalAuditPages,
+    paginatedItems: paginatedAuditLogs,
+  } = usePagination(filteredAuditLogs, 15);
+
+  React.useEffect(() => {
+    setAuditPage(1);
+  }, [searchTerm, moduleFilter, startDate, endDate]);
 
   const exportCSV = (type: string) => {
     alert(`Exporting ${type} report to CSV...`);
@@ -66,25 +119,82 @@ export const ReportsPage: React.FC = () => {
       {/* Tab 1: Audit Trail */}
       {activeTab === 'audit' && (
         <Card className="border border-slate-200 dark:border-slate-800">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                Immutable System Audit Logs
-              </CardTitle>
-              <CardDescription>
-                Records of all user actions, PO changes, stock adjustments, kit issuance and supervisor closures.
-              </CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  Immutable System Audit Logs
+                </CardTitle>
+                <CardDescription>
+                  Records of all user actions, PO changes, stock adjustments, kit issuance and supervisor closures.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 max-w-xs">
+                  <Input
+                    placeholder="Search user, action, details..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-8 text-xs w-44"
+                  />
+                </div>
+
+                <Select value={moduleFilter} onValueChange={setModuleFilter}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue placeholder="All Modules" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Modules</SelectItem>
+                    {dynamicModules.map((mod) => (
+                      <SelectItem key={mod} value={mod}>
+                        {mod}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <div className="flex items-center gap-1.5 text-xs">
+                  <DatePicker
+                    value={startDate}
+                    onChange={setStartDate}
+                    placeholder="Start date"
+                    className="w-32"
+                  />
+                  <span className="text-slate-400 text-[10px]">to</span>
+                  <DatePicker
+                    value={endDate}
+                    onChange={setEndDate}
+                    placeholder="End date"
+                    className="w-32"
+                  />
+                  {(startDate || endDate) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStartDate('');
+                        setEndDate('');
+                      }}
+                      className="h-8 px-2 text-xs text-rose-500 hover:text-rose-700"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => exportCSV('Audit Logs')}
+                  className="h-8 text-xs"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Export
+                </Button>
+              </div>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => exportCSV('Audit Logs')}
-              className="text-xs"
-            >
-              <Download className="w-3.5 h-3.5 mr-1.5" />
-              Export Audit Trail
-            </Button>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -99,7 +209,7 @@ export const ReportsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {auditLogs.map((log) => (
+                  {paginatedAuditLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                       <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{log.timestamp}</td>
                       <td className="py-3 px-3 font-medium text-slate-800 dark:text-slate-200">{log.user}</td>
@@ -114,9 +224,25 @@ export const ReportsPage: React.FC = () => {
                       <td className="py-3 px-3 text-slate-600 dark:text-slate-400">{log.details}</td>
                     </tr>
                   ))}
+                  {filteredAuditLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400">
+                        No audit logs found matching your criteria.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              currentPage={auditPage}
+              totalPages={totalAuditPages}
+              totalItems={totalAuditItems}
+              pageSize={auditPageSize}
+              pageSizeOptions={[10, 15, 25, 50]}
+              onPageChange={setAuditPage}
+              onPageSizeChange={setAuditPageSize}
+            />
           </CardContent>
         </Card>
       )}

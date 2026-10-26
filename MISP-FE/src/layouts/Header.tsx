@@ -7,8 +7,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, Menu, User, Moon, Sun, ExternalLink, MapPin, Building2, ChevronDown, Check } from 'lucide-react';
-import React from 'react';
+import { Bell, Menu, User, Moon, Sun, ExternalLink, MapPin, Building2, ChevronDown, Check, KeyRound, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
 import { useUserStore } from '@/store/useAuthStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useDarkModeStore } from '@/store/useDarkModeStore';
@@ -16,6 +16,7 @@ import { useMipsStore } from '@/store/useMipsStore';
 import { useNavigate } from 'react-router-dom';
 import { getInitials } from '@/utils/common';
 import { useAuth } from '@/api/queries/auth';
+import { ChangePinModal } from '@/components/common/ChangePinModal';
 interface HeaderProps {
   onMenuClick?: () => void;
   showMenuButton?: boolean;
@@ -41,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   const isManasum = hostname.includes("manasum");
 
   const { selectedPlant, setSelectedPlant, plants } = useMipsStore();
+  const [isChangePinOpen, setIsChangePinOpen] = useState(false);
 
   const plantOptions = [
     ...(plants || []).map((p) => ({
@@ -63,6 +65,10 @@ export const Header: React.FC<HeaderProps> = ({
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
+      // Clear ALL persisted store data from localStorage on logout
+      localStorage.removeItem('mips_manufacturing_store_v7');
+      localStorage.removeItem('user-storage');
+      localStorage.removeItem('notification-store');
       sessionStorage.clear();
       logout();
       navigate('/login');
@@ -199,14 +205,35 @@ export const Header: React.FC<HeaderProps> = ({
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700" align="end" forceMount>
+            <DropdownMenuContent className="w-64 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 shadow-xl rounded-xl p-1.5" align="end" forceMount>
+              {/* User Identity & Active Role Badge */}
+              <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 mb-1">
+                <div className="font-semibold text-xs text-gray-900 dark:text-gray-100 truncate">
+                  {user?.fullName || 'Eiffel Staff Member'}
+                </div>
+                <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate mb-1.5">
+                  {user?.email || 'user@eiffel.in'}
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <span>{user?.role || 'Staff'}</span>
+                </div>
+              </div>
 
               <DropdownMenuItem
                 onClick={() => navigate('/profile')}
-                className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded-lg text-xs font-medium"
               >
-                <User className="h-4 w-4 mr-2" />
-                Profile
+                <User className="h-4 w-4 mr-2 text-slate-500" />
+                Profile & Facility Scopes
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => setIsChangePinOpen(true)}
+                className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded-lg text-xs font-medium"
+              >
+                <KeyRound className="h-4 w-4 mr-2 text-emerald-600 dark:text-[#84cc16]" />
+                Change Login PIN
               </DropdownMenuItem>
 
               {isExternal && (
@@ -217,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({
                       window.location.href = `${assistUrl}`;
                     }
                   }}
-                  className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded-lg text-xs font-medium"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Switch Application
@@ -226,10 +253,10 @@ export const Header: React.FC<HeaderProps> = ({
 
               {!isExternal && (
                 <>
-                  <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
+                  <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700 my-1" />
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer rounded-lg text-xs font-medium"
                   >
                     Log out
                   </DropdownMenuItem>
@@ -240,6 +267,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
+      <ChangePinModal
+        isOpen={isChangePinOpen}
+        onClose={() => setIsChangePinOpen(false)}
+      />
     </header>
   );
 };

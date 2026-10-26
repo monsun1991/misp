@@ -42,4 +42,15 @@ router.get(
   })
 );
 
+// Change / Set PIN (Authenticated User)
+router.post(
+  "/change-pin",
+  authorizeUser([]),
+  catchAsync(async (req: Request, res: Response) => {
+    const controller = new AuthController(req);
+    const response = await controller.changePin(req.body);
+    res.json(response);
+  })
+);
+
 export default router;

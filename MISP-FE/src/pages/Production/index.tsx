@@ -9,14 +9,25 @@ import {
   RotateCcw,
   UserCheck,
   Search,
-  Filter
+  Filter,
+  Edit2,
+  Trash2
 } from 'lucide-react';
-import { useMipsStore, isPlantMatch } from '@/store/useMipsStore';
+import { useMipsStore, isPlantMatch, ProductionLog } from '@/store/useMipsStore';
 import { mipsService } from '@/api/services/mips.service';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TablePagination, usePagination } from '@/components/common/TablePagination';
 
 export const ProductionPage: React.FC = () => {
   const {
@@ -26,12 +37,58 @@ export const ProductionPage: React.FC = () => {
     employees: rawEmployees,
     selectedPlant,
     setEmployees,
-    addProductionLog
+    addProductionLog,
+    updateProductionLog,
+    deleteProductionLog
   } = useMipsStore();
 
   const productionLogs = rawProductionLogs.filter((p) => isPlantMatch(p.plant, selectedPlant));
   const kits = rawKits.filter((k) => isPlantMatch(k.plant, selectedPlant));
   const employees = rawEmployees.filter((e) => isPlantMatch(e.plant, selectedPlant));
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [shiftFilter, setShiftFilter] = useState('All');
+  const [wattageFilter, setWattageFilter] = useState('All');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const filteredLogs = React.useMemo(() => {
+    return productionLogs.filter((log) => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        !q ||
+        log.orderNo.toLowerCase().includes(q) ||
+        log.productName.toLowerCase().includes(q) ||
+        log.operator.toLowerCase().includes(q) ||
+        log.supervisor.toLowerCase().includes(q);
+
+      const matchesShift = shiftFilter === 'All' || log.shift === shiftFilter;
+
+      const prod = products.find((p) => p.name === log.productName || p.id === (log as any).productId);
+      const matchesWattage = wattageFilter === 'All' || (prod && prod.wattage === wattageFilter);
+
+      const logDate = log.date ? log.date.split('T')[0] : '';
+      const matchesDate =
+        (!startDate || logDate >= startDate) &&
+        (!endDate || logDate <= endDate);
+
+      return matchesSearch && matchesShift && matchesWattage && matchesDate;
+    });
+  }, [productionLogs, products, searchTerm, shiftFilter, wattageFilter, startDate, endDate]);
+
+  const {
+    currentPage: prodPage,
+    setCurrentPage: setProdPage,
+    pageSize: prodPageSize,
+    setPageSize: setProdPageSize,
+    totalItems: totalProdItems,
+    totalPages: totalProdPages,
+    paginatedItems: paginatedLogs,
+  } = usePagination(filteredLogs, 10);
+
+  React.useEffect(() => {
+    setProdPage(1);
+  }, [searchTerm, shiftFilter, wattageFilter, startDate, endDate]);
 
   const [showLogModal, setShowLogModal] = useState(false);
   const [selectedProdId, setSelectedProdId] = useState(products[0]?.id || '');
@@ -43,6 +100,19 @@ export const ProductionPage: React.FC = () => {
   const [operator, setOperator] = useState('');
   const [supervisor, setSupervisor] = useState('');
   const [workHours, setWorkHours] = useState<number>(8);
+
+  // Edit Production Log State
+  const [showEditLogModal, setShowEditLogModal] = useState(false);
+  const [editingLogId, setEditingLogId] = useState('');
+  const [editShift, setEditShift] = useState<'Shift A (Morning)' | 'Shift B (Evening)' | 'General Shift'>('Shift A (Morning)');
+  const [editTargetUnits, setEditTargetUnits] = useState<number>(100);
+  const [editActualUnits, setEditActualUnits] = useState<number>(95);
+  const [editRejectUnits, setEditRejectUnits] = useState<number>(2);
+  const [editWasteUnits, setEditWasteUnits] = useState<number>(1);
+  const [editOperator, setEditOperator] = useState('');
+  const [editSupervisor, setEditSupervisor] = useState('');
+  const [editWorkHours, setEditWorkHours] = useState<number>(8);
+  const [editProductName, setEditProductName] = useState('');
 
   useEffect(() => {
     const syncStaff = async () => {
@@ -107,6 +177,44 @@ export const ProductionPage: React.FC = () => {
     });
 
     setShowLogModal(false);
+  };
+
+  const openEditLogModal = (log: ProductionLog) => {
+    setEditingLogId(log.id);
+    setEditShift(log.shift as any || 'Shift A (Morning)');
+    setEditTargetUnits(log.targetQty);
+    setEditActualUnits(log.actualQty);
+    setEditRejectUnits(log.rejectedQty);
+    setEditWasteUnits(log.wastageQty);
+    setEditOperator(log.operator);
+    setEditSupervisor(log.supervisor);
+    setEditWorkHours(log.workingHours || 8);
+    setEditProductName(log.productName);
+    setShowEditLogModal(true);
+  };
+
+  const handleEditLogSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLogId) return;
+
+    updateProductionLog(editingLogId, {
+      shift: editShift,
+      targetQty: editTargetUnits,
+      actualQty: editActualUnits,
+      rejectedQty: editRejectUnits,
+      wastageQty: editWasteUnits,
+      operator: editOperator,
+      supervisor: editSupervisor,
+      workingHours: editWorkHours,
+    });
+
+    setShowEditLogModal(false);
+  };
+
+  const handleDeleteLog = (id: string, orderNo: string) => {
+    if (window.confirm(`Are you sure you want to delete production log ${orderNo}?`)) {
+      deleteProductionLog(id);
+    }
   };
 
   const totalProduced = productionLogs.reduce((acc, p) => acc + p.actualQty, 0);
@@ -191,10 +299,81 @@ export const ProductionPage: React.FC = () => {
       {/* Production Logs Table */}
       <Card className="border border-slate-200 dark:border-slate-800">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Production Orders & Shift Entries</CardTitle>
-          <CardDescription>
-            Formula: Productivity % = (Actual Production / Expected Production) &times; 100
-          </CardDescription>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base font-semibold">Production Orders & Shift Entries</CardTitle>
+              <CardDescription>
+                Formula: Productivity % = (Actual Production / Expected Production) &times; 100
+              </CardDescription>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 max-w-xs">
+                <Input
+                  placeholder="Search order, product, operator..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-8 text-xs w-48 sm:w-56"
+                />
+              </div>
+
+              <Select value={shiftFilter} onValueChange={setShiftFilter}>
+                <SelectTrigger className="w-[155px] h-8 text-xs">
+                  <SelectValue placeholder="All Shifts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Shifts</SelectItem>
+                  <SelectItem value="Shift A (Morning)">Shift A (Morning)</SelectItem>
+                  <SelectItem value="Shift B (Evening)">Shift B (Evening)</SelectItem>
+                  <SelectItem value="General Shift">General Shift</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={wattageFilter} onValueChange={setWattageFilter}>
+                <SelectTrigger className="w-[125px] h-8 text-xs">
+                  <SelectValue placeholder="All Wattages" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Wattages</SelectItem>
+                  <SelectItem value="5W">5W</SelectItem>
+                  <SelectItem value="9W">9W</SelectItem>
+                  <SelectItem value="12W">12W</SelectItem>
+                  <SelectItem value="15W">15W</SelectItem>
+                  <SelectItem value="20W">20W</SelectItem>
+                  <SelectItem value="50W">50W</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center gap-1.5 text-xs">
+                <DatePicker
+                  value={startDate}
+                  onChange={setStartDate}
+                  placeholder="Start date"
+                  className="w-32"
+                />
+                <span className="text-slate-400 text-[10px]">to</span>
+                <DatePicker
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="End date"
+                  className="w-32"
+                />
+                {(startDate || endDate) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setStartDate('');
+                      setEndDate('');
+                    }}
+                    className="h-8 px-2 text-xs text-rose-500 hover:text-rose-700"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -210,10 +389,11 @@ export const ProductionPage: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">Rejections</th>
                   <th className="py-2.5 px-3 text-right">Units / Hr</th>
                   <th className="py-2.5 px-3 text-center">Productivity</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {productionLogs.map((log) => (
+                {paginatedLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                     <td className="py-3 px-3">
                       <div className="font-semibold text-slate-800 dark:text-slate-200">{log.date}</div>
@@ -245,166 +425,340 @@ export const ProductionPage: React.FC = () => {
                         {log.productivityPct}%
                       </Badge>
                     </td>
+                    <td className="py-3 px-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditLogModal(log)}
+                          className="h-7 w-7 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                          title="Edit Log"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteLog(log.id, log.orderNo)}
+                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          title="Delete Log"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
+                {filteredLogs.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center text-slate-400">
+                      No production orders or shift entries found matching your criteria.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <TablePagination
+            currentPage={prodPage}
+            totalPages={totalProdPages}
+            totalItems={totalProdItems}
+            pageSize={prodPageSize}
+            onPageChange={setProdPage}
+            onPageSizeChange={setProdPageSize}
+          />
         </CardContent>
       </Card>
 
       {/* Log Production Modal */}
       {showLogModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Factory className="w-4 h-4 text-[#146b68] dark:text-[#84cc16]" />
                 Log Production Output
               </h2>
-              <button onClick={() => setShowLogModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowLogModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
                 &times;
               </button>
             </div>
 
-            <form onSubmit={handleLogSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold mb-1">Select Manufactured Product</label>
-                <select
-                  value={selectedProdId}
-                  onChange={(e) => setSelectedProdId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.code} - {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleLogSubmit} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
                 <div>
-                  <label className="block font-semibold mb-1">Shift</label>
+                  <label className="block font-semibold mb-1">Select Manufactured Product</label>
                   <select
-                    value={shift}
-                    onChange={(e) => setShift(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                    value={selectedProdId}
+                    onChange={(e) => setSelectedProdId(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
                   >
-                    <option value="Shift A (Morning)">Shift A (Morning)</option>
-                    <option value="Shift B (Evening)">Shift B (Evening)</option>
-                    <option value="General Shift">General Shift</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Working Hours</label>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    value={workHours}
-                    onChange={(e) => setWorkHours(Number(e.target.value))}
-                    className="h-9"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold mb-1">Expected Production Qty</label>
-                  <Input
-                    type="number"
-                    value={targetUnits}
-                    onChange={(e) => setTargetUnits(Number(e.target.value))}
-                    required
-                    className="h-9"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Actual Produced</label>
-                  <Input
-                    type="number"
-                    value={actualUnits}
-                    onChange={(e) => setActualUnits(Number(e.target.value))}
-                    required
-                    className="h-9 font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold mb-1 text-red-500">QA Rejections</label>
-                  <Input
-                    type="number"
-                    value={rejectUnits}
-                    onChange={(e) => setRejectUnits(Number(e.target.value))}
-                    className="h-9"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1 text-amber-500">Wastage / Scrap</label>
-                  <Input
-                    type="number"
-                    value={wasteUnits}
-                    onChange={(e) => setWasteUnits(Number(e.target.value))}
-                    className="h-9"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold mb-1">Operator / Worker *</label>
-                  <select
-                    value={operator}
-                    onChange={(e) => setOperator(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
-                  >
-                    <option value="">-- Select Line Operator --</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.name}>
-                        {emp.name} ({emp.role} &bull; {emp.department})
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.code} - {p.name}
                       </option>
                     ))}
-                    {/* Fallback default operators if database has only admin */}
-                    {employees.length <= 1 && (
-                      <>
-                        <option value="Ravi Kumar">Ravi Kumar (Worker &bull; Assembly Line 1)</option>
-                        <option value="Amit Sharma">Amit Sharma (Worker &bull; Assembly Line 1)</option>
-                        <option value="Priya Verma">Priya Verma (Worker &bull; Assembly Line 2)</option>
-                      </>
-                    )}
                   </select>
                 </div>
-                <div>
-                  <label className="block font-semibold mb-1">Floor Supervisor *</label>
-                  <select
-                    value={supervisor}
-                    onChange={(e) => setSupervisor(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
-                  >
-                    <option value="">-- Select Floor Supervisor --</option>
-                    {employees
-                      .filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin'))
-                      .map((sup) => (
-                        <option key={sup.id} value={sup.name}>
-                          {sup.name} ({sup.role})
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Shift</label>
+                    <select
+                      value={shift}
+                      onChange={(e) => setShift(e.target.value as any)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    >
+                      <option value="Shift A (Morning)">Shift A (Morning)</option>
+                      <option value="Shift B (Evening)">Shift B (Evening)</option>
+                      <option value="General Shift">General Shift</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Working Hours</label>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={workHours}
+                      onChange={(e) => setWorkHours(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Expected Production Qty</label>
+                    <Input
+                      type="number"
+                      value={targetUnits}
+                      onChange={(e) => setTargetUnits(Number(e.target.value))}
+                      required
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Actual Produced</label>
+                    <Input
+                      type="number"
+                      value={actualUnits}
+                      onChange={(e) => setActualUnits(Number(e.target.value))}
+                      required
+                      className="h-9 font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-red-500">QA Rejections</label>
+                    <Input
+                      type="number"
+                      value={rejectUnits}
+                      onChange={(e) => setRejectUnits(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-amber-500">Wastage / Scrap</label>
+                    <Input
+                      type="number"
+                      value={wasteUnits}
+                      onChange={(e) => setWasteUnits(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Operator / Worker *</label>
+                    <select
+                      value={operator}
+                      onChange={(e) => setOperator(e.target.value)}
+                      required
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
+                    >
+                      <option value="">-- Select Line Operator --</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.name}>
+                          {emp.name} ({emp.role} &bull; {emp.department})
                         </option>
                       ))}
-                    <option value="Suresh Patil">Suresh Patil (Floor Supervisor)</option>
-                    <option value="Anand Deshmukh">Anand Deshmukh (Plant Manager)</option>
-                    <option value="Ramesh Naidu">Ramesh Naidu (Shift Incharge)</option>
-                  </select>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Floor Supervisor *</label>
+                    <select
+                      value={supervisor}
+                      onChange={(e) => setSupervisor(e.target.value)}
+                      required
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
+                    >
+                      <option value="">-- Select Floor Supervisor --</option>
+                      {employees
+                        .filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin'))
+                        .map((sup) => (
+                          <option key={sup.id} value={sup.name}>
+                            {sup.name} ({sup.role})
+                          </option>
+                        ))}
+                      {employees.filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin')).length === 0 && (
+                        <>
+                          <option value="Suresh Patil">Suresh Patil (Floor Supervisor)</option>
+                          <option value="Anand Deshmukh">Anand Deshmukh (Plant Manager)</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowLogModal(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold">
                   Save Production Record
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Production Record Modal */}
+      {showEditLogModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto p-4 flex justify-center items-start sm:items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full my-auto flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b p-4 sm:p-5 shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Edit2 className="w-4 h-4 text-blue-600" />
+                  Edit Production Shift Entry
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">{editProductName}</p>
+              </div>
+              <button onClick={() => setShowEditLogModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleEditLogSubmit} className="flex flex-col min-h-0 flex-1">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Shift</label>
+                    <select
+                      value={editShift}
+                      onChange={(e) => setEditShift(e.target.value as any)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    >
+                      <option value="Shift A (Morning)">Shift A (Morning)</option>
+                      <option value="Shift B (Evening)">Shift B (Evening)</option>
+                      <option value="General Shift">General Shift</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Working Hours</label>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={editWorkHours}
+                      onChange={(e) => setEditWorkHours(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Expected Production Qty</label>
+                    <Input
+                      type="number"
+                      value={editTargetUnits}
+                      onChange={(e) => setEditTargetUnits(Number(e.target.value))}
+                      required
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Actual Produced</label>
+                    <Input
+                      type="number"
+                      value={editActualUnits}
+                      onChange={(e) => setEditActualUnits(Number(e.target.value))}
+                      required
+                      className="h-9 font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-red-500">QA Rejections</label>
+                    <Input
+                      type="number"
+                      value={editRejectUnits}
+                      onChange={(e) => setEditRejectUnits(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-amber-500">Wastage / Scrap</label>
+                    <Input
+                      type="number"
+                      value={editWasteUnits}
+                      onChange={(e) => setEditWasteUnits(Number(e.target.value))}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Operator / Worker *</label>
+                    <select
+                      value={editOperator}
+                      onChange={(e) => setEditOperator(e.target.value)}
+                      required
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
+                    >
+                      <option value="">-- Select Line Operator --</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.name}>
+                          {emp.name} ({emp.role} &bull; {emp.department})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Floor Supervisor *</label>
+                    <select
+                      value={editSupervisor}
+                      onChange={(e) => setEditSupervisor(e.target.value)}
+                      required
+                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
+                    >
+                      <option value="">-- Select Floor Supervisor --</option>
+                      {employees
+                        .filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin'))
+                        .map((sup) => (
+                          <option key={sup.id} value={sup.name}>
+                            {sup.name} ({sup.role})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t shrink-0 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowEditLogModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  Save Changes
                 </Button>
               </div>
             </form>
