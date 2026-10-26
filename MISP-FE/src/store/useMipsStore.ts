@@ -1959,7 +1959,14 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
 
           set({
             materials: materials || [],
-            products: products || [],
+            products: (products || []).map((p: any) => ({
+              ...p,
+              bom: Array.isArray(p.bom)
+                ? p.bom
+                : p.bomJson
+                ? (typeof p.bomJson === 'string' ? JSON.parse(p.bomJson) : p.bomJson)
+                : [],
+            })),
             purchaseOrders: purchaseOrders || [],
             kits: kits || [],
             productionLogs: productionLogs || [],

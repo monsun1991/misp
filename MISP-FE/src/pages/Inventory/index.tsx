@@ -254,7 +254,7 @@ export const InventoryPage: React.FC = () => {
       const matchesWattage =
         wattageFilter === 'All' ||
         products.some(
-          (p) => p.wattage === wattageFilter && p.bom.some((b) => b.materialId === m.id || b.materialCode === m.code)
+          (p) => p.wattage === wattageFilter && (p.bom || []).some((b) => b.materialId === m.id || b.materialCode === m.code)
         );
       return matchesSearch && matchesCategory && matchesWarehouse && matchesWattage;
     });
@@ -309,8 +309,8 @@ export const InventoryPage: React.FC = () => {
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         const prodMatches = p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term);
-        const subpartMatches = p.bom.some(
-          (b) => b.materialName.toLowerCase().includes(term) || b.materialCode.toLowerCase().includes(term)
+        const subpartMatches = (p.bom || []).some(
+          (b) => (b.materialName || '').toLowerCase().includes(term) || (b.materialCode || '').toLowerCase().includes(term)
         );
         termMatches = prodMatches || subpartMatches;
       }
@@ -322,7 +322,7 @@ export const InventoryPage: React.FC = () => {
 
       if (categoryFilter !== 'All') {
         const prodCatMatch = p.category === categoryFilter;
-        const subpartCatMatch = p.bom.some((b) => {
+        const subpartCatMatch = (p.bom || []).some((b) => {
           const mat = materials.find((m) => m.id === b.materialId || m.code === b.materialCode);
           if (!mat) return false;
           return matchesCategoryHelper(mat.category, mat.subCategory);
@@ -331,7 +331,7 @@ export const InventoryPage: React.FC = () => {
       }
 
       if (warehouseFilter !== 'All') {
-        const subpartWhMatch = p.bom.some((b) => {
+        const subpartWhMatch = (p.bom || []).some((b) => {
           const mat = materials.find((m) => m.id === b.materialId || m.code === b.materialCode);
           return mat?.warehouse === warehouseFilter;
         });
@@ -720,7 +720,7 @@ export const InventoryPage: React.FC = () => {
                               </span>
                             </div>
                             <div className="text-[11px] text-slate-500 mt-0.5">
-                              Bill of Materials: <strong>{prod.bom.length} Subparts</strong> &bull; Standard Cost: ₹{prod.standardCost}
+                              Bill of Materials: <strong>{(prod.bom || []).length} Subparts</strong> &bull; Standard Cost: ₹{prod.standardCost}
                             </div>
                           </div>
                         </div>
@@ -759,7 +759,7 @@ export const InventoryPage: React.FC = () => {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                              {prod.bom.map((b) => {
+                              {(prod.bom || []).map((b) => {
                                 const mat = materials.find((m) => m.id === b.materialId || m.code === b.materialCode);
                                 const rejections = mat ? getMaterialRejectionCount(mat.id) : 0;
                                 const businessId = mat ? getMaterialBusinessId(mat.id, b.materialCode.split('-')[0]) : 'LOT-2026';

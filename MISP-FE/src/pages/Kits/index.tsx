@@ -72,7 +72,8 @@ export const KitsPage: React.FC = () => {
   const [reconcileError, setReconcileError] = useState<string | null>(null);
   const [defectiveCount, setDefectiveCount] = useState<number>(0);
 
-  const selectedProduct = products.find((p) => p.id === selectedProdId) || products[0];
+  const selectedProduct = (products || []).find((p) => p.id === selectedProdId) || products[0];
+  const productBom = selectedProduct && Array.isArray(selectedProduct.bom) ? selectedProduct.bom : [];
 
   const handleOpenCreateModal = () => {
     setShowCreateModal(true);
@@ -82,14 +83,19 @@ export const KitsPage: React.FC = () => {
     e.preventDefault();
     if (!selectedProduct || batchQty <= 0) return;
 
+    if (productBom.length === 0) {
+      alert('The selected product has no BOM (Bill of Materials) components defined. Please configure BOM in Masters first.');
+      return;
+    }
+
     // Build kit items from product BOM multiplied by batchQty
-    const kitItems: KitItem[] = selectedProduct.bom.map((b) => {
-      const totalIssuedQty = b.qtyPerUnit * batchQty;
+    const kitItems: KitItem[] = productBom.map((b) => {
+      const totalIssuedQty = (b.qtyPerUnit || 1) * batchQty;
       return {
         materialId: b.materialId,
         materialCode: b.materialCode,
         materialName: b.materialName,
-        bomQtyPerUnit: b.qtyPerUnit,
+        bomQtyPerUnit: b.qtyPerUnit || 1,
         totalIssuedQty,
         consumedQty: 0,
         returnedQty: 0,
@@ -737,13 +743,26 @@ export const KitsPage: React.FC = () => {
                     value={selectedProdId}
                     onChange={(e) => setSelectedProdId(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    required
                   >
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.code} - {p.name} ({p.wattage})
-                      </option>
-                    ))}
+                    {(products || []).length === 0 ? (
+                      <option value="">No products available. Please add products in Masters first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Product to Assemble --</option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.code} - {p.name} ({p.wattage || p.category})
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
+                  {(products || []).length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ No products registered. Please register products in Masters &gt; Finished Products tab first.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -765,11 +784,15 @@ export const KitsPage: React.FC = () => {
                       onChange={(e) => setDepartmentName(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
                     >
-                      {departments.map((dept) => (
-                        <option key={dept.id} value={dept.name}>
-                          {dept.name} ({dept.plant})
-                        </option>
-                      ))}
+                      {(departments || []).length === 0 ? (
+                        <option value="">No departments available</option>
+                      ) : (
+                        departments.map((dept) => (
+                          <option key={dept.id} value={dept.name}>
+                            {dept.name} ({dept.plant || 'Main Plant'})
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
                 </div>
@@ -788,11 +811,15 @@ export const KitsPage: React.FC = () => {
                       required
                       className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
                     >
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.name}>
-                          {emp.name} &bull; {emp.role} ({emp.department})
-                        </option>
-                      ))}
+                      {(employees || []).length === 0 ? (
+                        <option value="">No employees available</option>
+                      ) : (
+                        employees.map((emp) => (
+                          <option key={emp.id} value={emp.name}>
+                            {emp.name} &bull; {emp.role} ({emp.department})
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
                   <div>
@@ -804,13 +831,13 @@ export const KitsPage: React.FC = () => {
                       className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
                     >
                       {employees
-                        .filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin'))
+                        .filter((e) => (e.role || '').includes('Supervisor') || (e.role || '').includes('Manager') || (e.role || '').includes('Admin'))
                         .map((sup) => (
                           <option key={sup.id} value={`${sup.name} (${sup.role})`}>
                             {sup.name} ({sup.role})
                           </option>
                         ))}
-                      {employees.filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin')).length === 0 && (
+                      {employees.filter((e) => (e.role || '').includes('Supervisor') || (e.role || '').includes('Manager') || (e.role || '').includes('Admin')).length === 0 && (
                         <option value="Supervisor">Supervisor</option>
                       )}
                     </select>
@@ -822,13 +849,19 @@ export const KitsPage: React.FC = () => {
                   <div className="font-semibold text-slate-700 dark:text-slate-300">
                     Materials To Be Issued ({batchQty} units BOM multiplier):
                   </div>
-                  <ul className="list-disc pl-4 text-[11px] text-slate-500 space-y-0.5">
-                    {selectedProduct.bom.map((b) => (
-                      <li key={b.materialId}>
-                        {b.materialName}: <strong>{b.qtyPerUnit * batchQty} {b.uom}</strong> (BOM: {b.qtyPerUnit}/unit)
-                      </li>
-                    ))}
-                  </ul>
+                  {productBom.length > 0 ? (
+                    <ul className="list-disc pl-4 text-[11px] text-slate-500 space-y-0.5">
+                      {productBom.map((b) => (
+                        <li key={b.materialId}>
+                          {b.materialName}: <strong>{(b.qtyPerUnit || 1) * batchQty} {b.uom}</strong> (BOM: {b.qtyPerUnit}/unit)
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 italic">
+                      {selectedProduct ? 'This product has no Bill of Materials (BOM) components defined.' : 'No products available to generate BOM.'}
+                    </p>
+                  )}
                 </div>
               </div>
 

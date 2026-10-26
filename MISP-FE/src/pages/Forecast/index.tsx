@@ -70,7 +70,7 @@ export const ForecastPage: React.FC = () => {
     const matchingProds = products.filter((p) => p.wattage === wattageFilter);
     const ids = new Set<string>();
     matchingProds.forEach((prod) => {
-      prod.bom.forEach((b) => {
+      (prod.bom || []).forEach((b) => {
         ids.add(b.materialId);
         if (b.materialCode) ids.add(b.materialCode);
       });

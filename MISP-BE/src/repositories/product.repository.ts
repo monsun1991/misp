@@ -4,8 +4,22 @@ import { NotFoundException } from "../utils/error.util";
 
 const getProductRepo = () => AppDataSource.getRepository(ProductEntity);
 
-export const getAllProducts = async (): Promise<ProductEntity[]> => {
-  return await getProductRepo().find({ order: { createdAt: "DESC" } });
+export const getAllProducts = async (): Promise<any[]> => {
+  const products = await getProductRepo().find({ order: { createdAt: "DESC" } });
+  return products.map((p) => {
+    let bom = [];
+    if (p.bomJson) {
+      try {
+        bom = JSON.parse(p.bomJson);
+      } catch (e) {
+        bom = [];
+      }
+    }
+    return {
+      ...p,
+      bom,
+    };
+  });
 };
 
 export const getProductById = async (id: string): Promise<ProductEntity> => {
@@ -14,17 +28,47 @@ export const getProductById = async (id: string): Promise<ProductEntity> => {
   return product;
 };
 
-export const createProduct = async (data: Partial<ProductEntity>): Promise<ProductEntity> => {
+export const createProduct = async (data: any): Promise<any> => {
   const repo = getProductRepo();
-  const product = repo.create(data);
-  return await repo.save(product);
+  if (data.bom && Array.isArray(data.bom)) {
+    data.bomJson = JSON.stringify(data.bom);
+  }
+  const product = repo.create(data as Partial<ProductEntity>);
+  const saved: any = await repo.save(product);
+  let bom = [];
+  if (saved.bomJson) {
+    try {
+      bom = JSON.parse(saved.bomJson);
+    } catch (e) {
+      bom = [];
+    }
+  }
+  return {
+    ...saved,
+    bom: data.bom || bom,
+  };
 };
 
-export const updateProduct = async (id: string, data: Partial<ProductEntity>): Promise<ProductEntity> => {
+export const updateProduct = async (id: string, data: any): Promise<any> => {
   const repo = getProductRepo();
   const product = await getProductById(id);
+  if (data.bom && Array.isArray(data.bom)) {
+    data.bomJson = JSON.stringify(data.bom);
+  }
   Object.assign(product, data);
-  return await repo.save(product);
+  const saved: any = await repo.save(product);
+  let bom = [];
+  if (saved.bomJson) {
+    try {
+      bom = JSON.parse(saved.bomJson);
+    } catch (e) {
+      bom = [];
+    }
+  }
+  return {
+    ...saved,
+    bom: data.bom || bom,
+  };
 };
 
 export const deleteProduct = async (id: string): Promise<void> => {

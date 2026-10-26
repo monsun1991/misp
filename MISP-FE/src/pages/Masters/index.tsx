@@ -171,7 +171,7 @@ export const MastersPage: React.FC = () => {
         products.some(
           (p) =>
             p.wattage === matWattageFilter &&
-            p.bom.some((b) => b.materialId === m.id || b.materialCode === m.code)
+            (p.bom || []).some((b) => b.materialId === m.id || b.materialCode === m.code)
         );
       return matchesSearch && matchesCat && matchesWattage;
     });
@@ -958,7 +958,7 @@ export const MastersPage: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex items-center justify-between pt-1 flex-wrap gap-1">
-                      <span className="text-xs text-slate-400">{prod.bom.length} BOM components</span>
+                      <span className="text-xs text-slate-400">{(prod.bom || []).length} BOM components</span>
                       <div className="flex items-center gap-1.5">
                         <Button
                           size="sm"
@@ -974,7 +974,7 @@ export const MastersPage: React.FC = () => {
                           variant="ghost"
                           onClick={() => {
                             setSelectedProduct(prod);
-                            setEditingBOM(prod.bom);
+                            setEditingBOM(prod.bom || []);
                             setActiveTab('bom');
                           }}
                           className="h-7 text-xs text-blue-600 hover:text-blue-700"
