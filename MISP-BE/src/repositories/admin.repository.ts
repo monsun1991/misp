@@ -41,8 +41,22 @@ export const deleteRole = async (id: string): Promise<void> => {
 };
 
 // Departments
-export const getAllDepartments = async (): Promise<DepartmentEntity[]> => {
-  return await getDeptRepo().find({ order: { createdAt: "DESC" } });
+export const getAllDepartments = async (): Promise<any[]> => {
+  const depts = await getDeptRepo().find({ order: { createdAt: "DESC" } });
+  return depts.map((d) => {
+    let teams: string[] = [];
+    if (d.activeTeamsJson) {
+      try {
+        teams = JSON.parse(d.activeTeamsJson);
+      } catch (e) {
+        teams = [];
+      }
+    }
+    return {
+      ...d,
+      activeTeams: teams,
+    };
+  });
 };
 
 export const getDepartmentById = async (id: string): Promise<DepartmentEntity> => {
@@ -51,17 +65,47 @@ export const getDepartmentById = async (id: string): Promise<DepartmentEntity> =
   return dept;
 };
 
-export const createDepartment = async (data: Partial<DepartmentEntity>): Promise<DepartmentEntity> => {
+export const createDepartment = async (data: any): Promise<any> => {
   const repo = getDeptRepo();
-  const dept = repo.create(data);
-  return await repo.save(dept);
+  if (data.activeTeams && Array.isArray(data.activeTeams)) {
+    data.activeTeamsJson = JSON.stringify(data.activeTeams);
+  }
+  const dept = repo.create(data as Partial<DepartmentEntity>);
+  const saved: any = await repo.save(dept);
+  let teams: string[] = [];
+  if (saved.activeTeamsJson) {
+    try {
+      teams = JSON.parse(saved.activeTeamsJson);
+    } catch (e) {
+      teams = [];
+    }
+  }
+  return {
+    ...saved,
+    activeTeams: data.activeTeams || teams,
+  };
 };
 
-export const updateDepartment = async (id: string, data: Partial<DepartmentEntity>): Promise<DepartmentEntity> => {
+export const updateDepartment = async (id: string, data: any): Promise<any> => {
   const repo = getDeptRepo();
   const dept = await getDepartmentById(id);
+  if (data.activeTeams && Array.isArray(data.activeTeams)) {
+    data.activeTeamsJson = JSON.stringify(data.activeTeams);
+  }
   Object.assign(dept, data);
-  return await repo.save(dept);
+  const saved: any = await repo.save(dept);
+  let teams: string[] = [];
+  if (saved.activeTeamsJson) {
+    try {
+      teams = JSON.parse(saved.activeTeamsJson);
+    } catch (e) {
+      teams = [];
+    }
+  }
+  return {
+    ...saved,
+    activeTeams: data.activeTeams || teams,
+  };
 };
 
 export const deleteDepartment = async (id: string): Promise<void> => {

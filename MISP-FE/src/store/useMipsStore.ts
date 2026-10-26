@@ -1968,7 +1968,14 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
             dispatchRecords: outwardDispatches || [],
             finishedGoods: finishedGoods || [],
             roles: roles || [],
-            departments: departments || [],
+            departments: (departments || []).map((d: any) => ({
+              ...d,
+              activeTeams: Array.isArray(d.activeTeams)
+                ? d.activeTeams
+                : d.activeTeamsJson
+                ? (typeof d.activeTeamsJson === 'string' ? JSON.parse(d.activeTeamsJson) : d.activeTeamsJson)
+                : [],
+            })),
             plants: plants || [],
             customers: customers || [],
             suppliers: suppliers || [],
