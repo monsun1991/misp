@@ -185,24 +185,19 @@ export const OrdersDispatchPage: React.FC = () => {
   };
 
   // New Customer PO Form State
-  const initialCustomer = customers[0] || {
-    name: 'Havells Consumer Luminaires',
-    gstin: '27AABCH1092P1ZF',
-    city: 'Pune',
-    state: 'Maharashtra'
-  };
+  const initialCustomer = customers[0] || null;
 
-  const [selectedCustomerOption, setSelectedCustomerOption] = useState<string>(customers[0]?.id || 'cust-001');
-  const [isCustomCustomer, setIsCustomCustomer] = useState(false);
+  const [selectedCustomerOption, setSelectedCustomerOption] = useState<string>(customers[0]?.id || 'custom');
+  const [isCustomCustomer, setIsCustomCustomer] = useState(customers.length === 0);
 
-  const [newCustName, setNewCustName] = useState(initialCustomer.name);
-  const [newCustGst, setNewCustGst] = useState(initialCustomer.gstin);
+  const [newCustName, setNewCustName] = useState(initialCustomer ? initialCustomer.name : '');
+  const [newCustGst, setNewCustGst] = useState(initialCustomer ? initialCustomer.gstin || '' : '');
   const [newCustPoNo, setNewCustPoNo] = useState(`PO/CUST/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`);
   const [newPoDate, setNewPoDate] = useState(new Date().toISOString().split('T')[0]);
   const [newDeliveryDate, setNewDeliveryDate] = useState(
     new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
-  const [newBillingCity, setNewBillingCity] = useState(`${initialCustomer.city}, ${initialCustomer.state}`);
+  const [newBillingCity, setNewBillingCity] = useState(initialCustomer ? `${initialCustomer.city}, ${initialCustomer.state}` : '');
   const [uploadedFileName, setUploadedFileName] = useState<string>('Customer_Purchase_Order.pdf');
   const [newOrderNotes, setNewOrderNotes] = useState('');
 

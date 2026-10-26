@@ -34,6 +34,7 @@ export const ProcurementPage: React.FC = () => {
     purchaseOrders: rawPurchaseOrders,
     materials: rawMaterials,
     employees,
+    suppliers,
     selectedPlant,
     createPurchaseOrder,
     updatePO,
@@ -45,9 +46,10 @@ export const ProcurementPage: React.FC = () => {
   const materials = rawMaterials.filter((m) => isPlantMatch(m.plant, selectedPlant));
 
   const allSuppliers = React.useMemo(() => {
-    const list = Array.from(new Set(rawMaterials.map((m) => m.supplier).filter(Boolean)));
-    return list.length > 0 ? list : ['Lumileds India Components', 'Bridgelux Semiconductor', 'Delta Electronics India'];
-  }, [rawMaterials]);
+    const fromSuppliers = (suppliers || []).map((s) => s.name).filter(Boolean);
+    const fromMaterials = rawMaterials.map((m) => m.supplier).filter(Boolean);
+    return Array.from(new Set([...fromSuppliers, ...fromMaterials]));
+  }, [suppliers, rawMaterials]);
 
   const authorizedEmployees = React.useMemo(() => {
     const plantEmps = (employees || []).filter((e) => isPlantMatch(e.plant, selectedPlant));

@@ -66,6 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
       console.error('Logout failed:', error);
     } finally {
       // Clear ALL persisted store data from localStorage on logout
+      localStorage.removeItem('mips_manufacturing_store_v10_clean');
       localStorage.removeItem('mips_manufacturing_store_v7');
       localStorage.removeItem('user-storage');
       localStorage.removeItem('notification-store');

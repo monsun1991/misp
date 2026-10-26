@@ -13,7 +13,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASS || '',
   database: process.env.DB_NAME || 'misp',
 
-  synchronize: true,
+  synchronize: process.env.NODE_ENV === 'production' ? false : true,
   logging: false,
   // Dynamically auto-load ALL models (even 100+ entities) without manual imports
   entities: [path.join(__dirname, '../models/*.model.{ts,js}')],

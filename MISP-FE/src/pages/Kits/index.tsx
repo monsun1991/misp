@@ -51,9 +51,9 @@ export const KitsPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedProdId, setSelectedProdId] = useState(products[0]?.id || '');
   const [batchQty, setBatchQty] = useState<number>(100);
-  const [assignedWorker, setAssignedWorker] = useState(employees[0]?.name || 'Ravi Kumar');
-  const [supervisorName, setSupervisorName] = useState('Suresh Patil (Supervisor)');
-  const [departmentName, setDepartmentName] = useState(departments[0]?.name || 'Final Assembly Line 1');
+  const [assignedWorker, setAssignedWorker] = useState(employees[0]?.name || '');
+  const [supervisorName, setSupervisorName] = useState(employees.find((e) => e.role.toLowerCase().includes('supervisor'))?.name || employees[0]?.name || '');
+  const [departmentName, setDepartmentName] = useState(departments[0]?.name || '');
 
   // Sync worker & department when employees/departments update on plant change
   React.useEffect(() => {
