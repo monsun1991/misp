@@ -77,3 +77,4 @@ export const deleteWarehouse = async (id: string): Promise<void> => {
   await getWarehouseById(id);
   await repo.delete(id);
 };
+

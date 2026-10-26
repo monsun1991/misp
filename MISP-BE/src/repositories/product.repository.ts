@@ -32,3 +32,4 @@ export const deleteProduct = async (id: string): Promise<void> => {
   await getProductById(id);
   await repo.delete(id);
 };
+

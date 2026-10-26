@@ -101,7 +101,11 @@ export const EmployeesPage: React.FC = () => {
             status: (u.status as any) || (u.isActive !== false ? 'Active' : 'Inactive'),
             joiningDate: u.createdAt ? u.createdAt.split('T')[0] : '2026-10-01',
             workstation: u.workstation || 'Floor',
-            skills: u.skills ? u.skills.split(',').map((s) => s.trim()) : [],
+            skills: Array.isArray(u.skills)
+              ? u.skills
+              : typeof u.skills === 'string' && u.skills
+              ? u.skills.split(',').map((s: string) => s.trim())
+              : [],
             customPermissions,
             revokedPermissions,
           };

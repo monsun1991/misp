@@ -78,3 +78,4 @@ export const createOutwardDispatch = async (data: Partial<OutwardDispatchEntity>
   const dispatch = repo.create(data);
   return await repo.save(dispatch);
 };
+

@@ -110,3 +110,4 @@ export const createAuditLog = async (data: Partial<AuditLogEntity>): Promise<Aud
   const log = repo.create(data);
   return await repo.save(log);
 };
+

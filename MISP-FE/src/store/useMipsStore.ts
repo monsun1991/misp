@@ -1971,7 +1971,11 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
               status: u.status || 'Active',
               joiningDate: u.createdAt ? u.createdAt.split('T')[0] : '2026-01-01',
               workstation: u.workstation,
-              skills: u.skills ? u.skills.split(',').map((s: string) => s.trim()) : [],
+              skills: Array.isArray(u.skills)
+                ? u.skills
+                : typeof u.skills === 'string' && u.skills
+                ? u.skills.split(',').map((s: string) => s.trim())
+                : [],
               customPermissions: u.customPermissions || [],
               revokedPermissions: u.revokedPermissions || [],
             })),

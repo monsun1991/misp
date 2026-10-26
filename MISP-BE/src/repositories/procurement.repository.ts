@@ -78,3 +78,4 @@ export const createGRNEntry = async (data: Partial<GRNEntryEntity>): Promise<GRN
   const grn = repo.create(data);
   return await repo.save(grn);
 };
+

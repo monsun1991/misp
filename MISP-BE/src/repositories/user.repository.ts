@@ -60,3 +60,4 @@ export const deleteUser = async (id: string): Promise<void> => {
   user.isActive = false;
   await repo.save(user);
 };
+

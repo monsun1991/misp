@@ -110,3 +110,4 @@ export const createFinishedGoodsLedger = async (data: Partial<FinishedGoodsLedge
   const entry = repo.create(data);
   return await repo.save(entry);
 };
+
