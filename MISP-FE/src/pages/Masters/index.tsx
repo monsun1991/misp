@@ -45,7 +45,7 @@ interface WarehouseItem {
   plant: string;
   type: string;
   capacityUnits: number;
-  manager: string;
+  manager?: string;
 }
 
 export const MastersPage: React.FC = () => {
@@ -61,17 +61,19 @@ export const MastersPage: React.FC = () => {
     customers,
     updateCustomer,
     employees,
-    plants
+    plants,
+    suppliers,
+    addSupplier,
+    updateSupplier,
+    deleteSupplier,
+    warehouses,
+    addWarehouse,
+    updateWarehouse,
+    deleteWarehouse,
   } = useMipsStore();
 
   const [activeTab, setActiveTab] = useState<'materials' | 'products' | 'bom' | 'suppliers' | 'customers' | 'warehouses'>('materials');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(products[0] || null);
-
-  // Suppliers state (empty by default)
-  const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
-
-  // Warehouses state (empty by default)
-  const [warehouses, setWarehouses] = useState<WarehouseItem[]>([]);
 
   // Modals
   const [showAddMatModal, setShowAddMatModal] = useState(false);
@@ -317,18 +319,14 @@ export const MastersPage: React.FC = () => {
     e.preventDefault();
     if (!newSupName) return;
 
-    setSuppliers([
-      ...suppliers,
-      {
-        id: `sup-${Date.now()}`,
-        name: newSupName,
-        category: newSupCat || 'General Components',
-        contactPerson: newSupContact,
-        phone: newSupPhone,
-        email: `${newSupName.toLowerCase().replace(/\s+/g, '')}@vendor.com`,
-        leadTimeAvg: newSupLead,
-      },
-    ]);
+    addSupplier({
+      name: newSupName,
+      category: newSupCat || 'General Components',
+      contactPerson: newSupContact,
+      phone: newSupPhone,
+      email: `${newSupName.toLowerCase().replace(/\s+/g, '')}@vendor.com`,
+      leadTimeAvg: newSupLead,
+    });
 
     setShowAddSupplierModal(false);
     setNewSupName('');
@@ -338,17 +336,13 @@ export const MastersPage: React.FC = () => {
     e.preventDefault();
     if (!newWhName) return;
 
-    setWarehouses([
-      ...warehouses,
-      {
-        id: `wh-${Date.now()}`,
-        name: newWhName,
-        plant: newWhPlant,
-        type: newWhType,
-        capacityUnits: newWhCapacity,
-        manager: newWhManager || 'Ramesh Sharma (Store Manager)',
-      },
-    ]);
+    addWarehouse({
+      name: newWhName,
+      plant: newWhPlant,
+      type: newWhType,
+      capacityUnits: newWhCapacity,
+      manager: newWhManager || 'Ramesh Sharma (Store Manager)',
+    });
 
     setShowAddWarehouseModal(false);
     setNewWhName('');
@@ -468,15 +462,14 @@ export const MastersPage: React.FC = () => {
 
   const handleSaveEditSupplier = (e: React.FormEvent) => {
     e.preventDefault();
-    setSuppliers(suppliers.map((s) => (s.id === editingSupId ? {
-      ...s,
+    updateSupplier(editingSupId, {
       name: editSupName,
       category: editSupCat,
       contactPerson: editSupContact,
       phone: editSupPhone,
       email: editSupEmail,
       leadTimeAvg: editSupLead,
-    } : s)));
+    });
     setShowEditSupplierModal(false);
   };
 
@@ -501,14 +494,13 @@ export const MastersPage: React.FC = () => {
 
   const handleSaveEditWarehouse = (e: React.FormEvent) => {
     e.preventDefault();
-    setWarehouses(warehouses.map((w) => (w.id === editingWhId ? {
-      ...w,
+    updateWarehouse(editingWhId, {
       name: editWhName,
       plant: editWhPlant,
       type: editWhType,
       capacityUnits: editWhCapacity,
       manager: editWhManager,
-    } : w)));
+    });
     setShowEditWarehouseModal(false);
   };
 

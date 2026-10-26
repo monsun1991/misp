@@ -27,7 +27,16 @@ export const API_ENDPOINTS = {
         customerPOs: `${BASE_URL}/mips/customer-pos`,
         outwardDispatches: `${BASE_URL}/mips/outward-dispatches`,
         finishedGoods: `${BASE_URL}/mips/finished-goods`,
+        finishedGoodsLedger: `${BASE_URL}/mips/finished-goods-ledger`,
         stockLedgers: `${BASE_URL}/mips/stock-ledgers`,
         productionLogs: `${BASE_URL}/mips/production-logs`,
+        roles: `${BASE_URL}/mips/roles`,
+        departments: `${BASE_URL}/mips/departments`,
+        plants: `${BASE_URL}/mips/plants`,
+        customers: `${BASE_URL}/mips/customers`,
+        suppliers: `${BASE_URL}/mips/suppliers`,
+        warehouses: `${BASE_URL}/mips/warehouses`,
+        grnEntries: `${BASE_URL}/mips/grn-entries`,
+        auditLogs: `${BASE_URL}/mips/audit-logs`,
     }
 };

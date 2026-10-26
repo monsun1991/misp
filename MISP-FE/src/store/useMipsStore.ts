@@ -445,6 +445,27 @@ export interface PlantLocation {
   status: 'Active' | 'Commissioning' | 'Inactive';
 }
 
+export interface SupplierItem {
+  id: string;
+  name: string;
+  category: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  leadTimeAvg: number;
+  gstNumber?: string;
+  address?: string;
+}
+
+export interface WarehouseItem {
+  id: string;
+  name: string;
+  plant: string;
+  type: string;
+  capacityUnits: number;
+  manager?: string;
+}
+
 interface MipsState {
   materials: Material[];
   products: Product[];
@@ -453,6 +474,8 @@ interface MipsState {
   grnEntries: GRNEntry[];
   customerPOs: CustomerPO[];
   customers: Customer[];
+  suppliers: SupplierItem[];
+  warehouses: WarehouseItem[];
   dispatchRecords: OutwardDispatchRecord[];
   kits: ProductionKit[];
   finishedGoods: FinishedGoodItem[];
@@ -541,6 +564,15 @@ interface MipsState {
   updatePlant: (id: string, updates: Partial<PlantLocation>) => void;
   deletePlant: (id: string) => void;
 
+  // Suppliers & Warehouses
+  addSupplier: (supplier: Omit<SupplierItem, 'id'>) => void;
+  updateSupplier: (id: string, updates: Partial<SupplierItem>) => void;
+  deleteSupplier: (id: string) => void;
+
+  addWarehouse: (warehouse: Omit<WarehouseItem, 'id'>) => void;
+  updateWarehouse: (id: string, updates: Partial<WarehouseItem>) => void;
+  deleteWarehouse: (id: string) => void;
+
   onboardEmployee: (employee: Omit<Employee, 'id'>) => void;
   updateEmployee: (id: string, updates: Partial<Employee>) => void;
   updateEmployeeUBAC: (id: string, customPermissions: string[], revokedPermissions: string[]) => void;
@@ -551,6 +583,7 @@ interface MipsState {
   selectedPlant: string;
   setSelectedPlant: (plant: string) => void;
 
+  initData: () => Promise<void>;
   resetToDefaultData: () => void;
 }
 
@@ -2260,6 +2293,8 @@ export const useMipsStore = create<MipsState>()(
       grnEntries: [],
       customerPOs: [],
       customers: [],
+      suppliers: [],
+      warehouses: [],
       dispatchRecords: [],
       kits: [],
       finishedGoods: [],
@@ -2292,18 +2327,21 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.createMaterial(material).catch((e) => console.warn('Failed to sync material to DB:', e));
       },
 
       updateMaterial: (id, updates) => {
         set((state) => ({
           materials: state.materials.map((m) => (m.id === id ? { ...m, ...updates } : m))
         }));
+        mipsService.updateMaterial(id, updates).catch((e) => console.warn('Failed to update material in DB:', e));
       },
 
       deleteMaterial: (id) => {
         set((state) => ({
           materials: state.materials.filter((m) => m.id !== id)
         }));
+        mipsService.deleteMaterial(id).catch((e) => console.warn('Failed to delete material from DB:', e));
       },
 
       addProduct: (product) => {
@@ -2314,18 +2352,21 @@ export const useMipsStore = create<MipsState>()(
         set((state) => ({
           products: [newProduct, ...state.products]
         }));
+        mipsService.createProduct(newProduct).catch((e) => console.warn('Failed to sync product to DB:', e));
       },
 
       updateProduct: (id, updates) => {
         set((state) => ({
           products: state.products.map((p) => (p.id === id ? { ...p, ...updates } : p))
         }));
+        mipsService.updateProduct(id, updates).catch((e) => console.warn('Failed to update product in DB:', e));
       },
 
       deleteProduct: (id) => {
         set((state) => ({
           products: state.products.filter((p) => p.id !== id)
         }));
+        mipsService.deleteProduct(id).catch((e) => console.warn('Failed to delete product from DB:', e));
       },
 
       adjustStock: (materialId, adjustmentQty, reason, user, meta) => {
@@ -2386,6 +2427,9 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.createStockLedger(entry).catch((e) => console.warn('Failed to sync stock ledger:', e));
+        mipsService.updateMaterial(materialId, { currentStock: newStock }).catch((e) => console.warn('Failed to sync material stock:', e));
       },
 
       createPurchaseOrder: (poData) => {
@@ -2414,6 +2458,8 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.createPurchaseOrder(po).catch((e) => console.warn('Failed to sync purchase order:', e));
       },
 
       updatePO: (id, updates) => {
@@ -2431,6 +2477,8 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.updatePurchaseOrder(id, updates).catch((e) => console.warn('Failed to update PO:', e));
       },
 
       updatePOStatus: (id, status, notes) => {
@@ -2448,6 +2496,8 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.updatePurchaseOrder(id, { status, notes }).catch((e) => console.warn('Failed to update PO status:', e));
       },
 
       createGRN: (grnData, user) => {
@@ -2514,6 +2564,21 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.createGRNEntry(grn).catch((e) => console.warn('Failed to sync GRN:', e));
+        mipsService.createStockLedger(ledgerEntry).catch((e) => console.warn('Failed to sync GRN ledger:', e));
+        if (targetPO) {
+          const newReceived = targetPO.receivedQty + grn.acceptedQty;
+          const newPending = Math.max(0, targetPO.orderedQty - newReceived);
+          mipsService.updatePurchaseOrder(targetPO.id, {
+            receivedQty: newReceived,
+            pendingQty: newPending,
+            status: (newPending === 0 ? 'Received' : 'Partially Received')
+          }).catch((e) => console.warn('Failed to update PO in GRN:', e));
+        }
+        if (material) {
+          mipsService.updateMaterial(material.id, { currentStock: newBalance }).catch((e) => console.warn('Failed to update material stock in GRN:', e));
+        }
       },
 
       createCustomerPO: (poData) => {
@@ -2587,6 +2652,7 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.updateCustomerPO(id, updates).catch((err) => console.warn('Failed to update Customer PO in MySQL:', err));
       },
 
       dispatchCustomerPO: (dispatchData) => {
@@ -2770,6 +2836,7 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.updateCustomerPO(id, { status: 'Closed', notes: reason }).catch((err) => console.warn('Failed to close Customer PO in MySQL:', err));
       },
 
       addCustomer: (newCust) => {
@@ -2789,6 +2856,7 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.createCustomer(customer).catch((err) => console.warn('Failed to sync Customer to MySQL:', err));
       },
 
       updateCustomer: (id, updates) => {
@@ -2806,6 +2874,7 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.updateCustomer(id, updates).catch((err) => console.warn('Failed to update Customer in MySQL:', err));
       },
 
       deleteCustomer: (id) => {
@@ -2823,6 +2892,7 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.deleteCustomer(id).catch((err) => console.warn('Failed to delete Customer from MySQL:', err));
       },
 
       createKit: (kitData) => {
@@ -2891,6 +2961,8 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.createKit(kit).catch((err) => console.warn('Failed to sync Kit to MySQL:', err));
       },
 
       updateKitStatus: (id, status, user) => {
@@ -2908,6 +2980,7 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.updateKit(id, { status }).catch((err) => console.warn('Failed to update Kit in MySQL:', err));
       },
 
       recordKitProgress: (kitId, updates, user) => {
@@ -3132,6 +3205,9 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.createFinishedGood(newItem).catch((err) => console.warn('Failed to sync Finished Good to MySQL:', err));
+        mipsService.createFinishedGoodsLedger(ledgerEntry).catch((err) => console.warn('Failed to sync Finished Goods Ledger to MySQL:', err));
       },
 
       adjustFinishedGoodsStock: (id, deltaQty, reason, user) => {
@@ -3185,6 +3261,9 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.updateFinishedGood(id, { quantityOnHand: newOnHand, availableQty: newAvailable, status: updatedStatus }).catch((err) => console.warn('Failed to update Finished Good in MySQL:', err));
+        mipsService.createFinishedGoodsLedger(ledgerEntry).catch((err) => console.warn('Failed to sync Finished Goods Ledger in MySQL:', err));
       },
 
       updateFinishedGoodStatus: (id, status, notes, user = 'Quality Incharge') => {
@@ -3213,6 +3292,8 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.updateFinishedGood(id, { status, notes }).catch((err) => console.warn('Failed to update Finished Good status in MySQL:', err));
       },
 
       addProductionLog: (logData) => {
@@ -3244,6 +3325,8 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.createProductionLog(log).catch((err) => console.warn('Failed to sync Production Log to MySQL:', err));
       },
 
       updateProductionLog: (id, updates) => {
@@ -3268,6 +3351,8 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.updateProductionLog(id, updates).catch((err) => console.warn('Failed to update Production Log in MySQL:', err));
       },
 
       deleteProductionLog: (id) => {
@@ -3285,6 +3370,8 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.deleteProductionLog(id).catch((err) => console.warn('Failed to delete Production Log from MySQL:', err));
       },
 
       addAuditLog: (user, action, module, details) => {
@@ -3301,6 +3388,8 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.createAuditLog({ user, action, module, details, timestamp: new Date().toLocaleString() }).catch((err) => console.warn('Failed to sync Audit Log to MySQL:', err));
       },
 
       // Dynamic Roles Actions
@@ -3321,6 +3410,7 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.createRole(role).catch((err) => console.warn('Failed to sync Role to MySQL:', err));
       },
 
       updateRole: (id, updates) => {
@@ -3338,6 +3428,7 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.updateRole(id, updates).catch((err) => console.warn('Failed to update Role in MySQL:', err));
       },
 
       deleteRole: (id) => {
@@ -3360,6 +3451,7 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.deleteRole(id).catch((err) => console.warn('Failed to delete Role from MySQL:', err));
       },
 
       // Dynamic Department Actions
@@ -3380,18 +3472,21 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.createDepartment(dept).catch((err) => console.warn('Failed to sync Department to MySQL:', err));
       },
 
       updateDepartment: (id, updates) => {
         set((state) => ({
           departments: state.departments.map((d) => (d.id === id ? { ...d, ...updates } : d))
         }));
+        mipsService.updateDepartment(id, updates).catch((err) => console.warn('Failed to update Department in MySQL:', err));
       },
 
       deleteDepartment: (id) => {
         set((state) => ({
           departments: state.departments.filter((d) => d.id !== id)
         }));
+        mipsService.deleteDepartment(id).catch((err) => console.warn('Failed to delete Department from MySQL:', err));
       },
 
       // Plant & Location Actions
@@ -3412,18 +3507,174 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+        mipsService.createPlant(plant).catch((err) => console.warn('Failed to sync Plant to MySQL:', err));
       },
 
       updatePlant: (id, updates) => {
         set((state) => ({
           plants: state.plants.map((p) => (p.id === id ? { ...p, ...updates } : p))
         }));
+        mipsService.updatePlant(id, updates).catch((err) => console.warn('Failed to update Plant in MySQL:', err));
       },
 
       deletePlant: (id) => {
         set((state) => ({
           plants: state.plants.filter((p) => p.id !== id)
         }));
+        mipsService.deletePlant(id).catch((err) => console.warn('Failed to delete Plant from MySQL:', err));
+      },
+
+      // Suppliers & Warehouses
+      addSupplier: (supplierData) => {
+        const id = `sup-${Date.now()}`;
+        const supplier: SupplierItem = { ...supplierData, id };
+        set((state) => ({
+          suppliers: [...state.suppliers, supplier],
+          auditLogs: [
+            {
+              id: `aud-${Date.now()}`,
+              timestamp: new Date().toLocaleString(),
+              user: 'procurement.head@mips.internal',
+              action: 'SUPPLIER_CREATED',
+              module: 'Master Data',
+              details: `Added new supplier: ${supplier.name}`
+            },
+            ...state.auditLogs
+          ]
+        }));
+        mipsService.createSupplier(supplier).catch((err) => console.warn('Failed to sync Supplier to MySQL:', err));
+      },
+
+      updateSupplier: (id, updates) => {
+        set((state) => ({
+          suppliers: state.suppliers.map((s) => (s.id === id ? { ...s, ...updates } : s))
+        }));
+        mipsService.updateSupplier(id, updates).catch((err) => console.warn('Failed to update Supplier in MySQL:', err));
+      },
+
+      deleteSupplier: (id) => {
+        set((state) => ({
+          suppliers: state.suppliers.filter((s) => s.id !== id)
+        }));
+        mipsService.deleteSupplier(id).catch((err) => console.warn('Failed to delete Supplier from MySQL:', err));
+      },
+
+      addWarehouse: (warehouseData) => {
+        const id = `wh-${Date.now()}`;
+        const warehouse: WarehouseItem = { ...warehouseData, id };
+        set((state) => ({
+          warehouses: [...state.warehouses, warehouse],
+          auditLogs: [
+            {
+              id: `aud-${Date.now()}`,
+              timestamp: new Date().toLocaleString(),
+              user: 'store.head@mips.internal',
+              action: 'WAREHOUSE_CREATED',
+              module: 'Master Data',
+              details: `Created new warehouse: ${warehouse.name} at ${warehouse.plant}`
+            },
+            ...state.auditLogs
+          ]
+        }));
+        mipsService.createWarehouse(warehouse).catch((err) => console.warn('Failed to sync Warehouse to MySQL:', err));
+      },
+
+      updateWarehouse: (id, updates) => {
+        set((state) => ({
+          warehouses: state.warehouses.map((w) => (w.id === id ? { ...w, ...updates } : w))
+        }));
+        mipsService.updateWarehouse(id, updates).catch((err) => console.warn('Failed to update Warehouse in MySQL:', err));
+      },
+
+      deleteWarehouse: (id) => {
+        set((state) => ({
+          warehouses: state.warehouses.filter((w) => w.id !== id)
+        }));
+        mipsService.deleteWarehouse(id).catch((err) => console.warn('Failed to delete Warehouse from MySQL:', err));
+      },
+
+      initData: async () => {
+        try {
+          const [
+            materials,
+            products,
+            purchaseOrders,
+            kits,
+            productionLogs,
+            stockLedgers,
+            customerPOs,
+            outwardDispatches,
+            finishedGoods,
+            roles,
+            departments,
+            plants,
+            customers,
+            suppliers,
+            warehouses,
+            grnEntries,
+            auditLogs,
+            users,
+          ] = await Promise.all([
+            mipsService.getMaterials(),
+            mipsService.getProducts(),
+            mipsService.getPurchaseOrders(),
+            mipsService.getKits(),
+            mipsService.getProductionLogs(),
+            mipsService.getStockLedgers(),
+            mipsService.getCustomerPOs(),
+            mipsService.getOutwardDispatches(),
+            mipsService.getFinishedGoods(),
+            mipsService.getRoles(),
+            mipsService.getDepartments(),
+            mipsService.getPlants(),
+            mipsService.getCustomers(),
+            mipsService.getSuppliers(),
+            mipsService.getWarehouses(),
+            mipsService.getGRNEntries(),
+            mipsService.getAuditLogs(),
+            mipsService.getUsers(),
+          ]);
+
+          set({
+            materials: materials || [],
+            products: products || [],
+            purchaseOrders: purchaseOrders || [],
+            kits: kits || [],
+            productionLogs: productionLogs || [],
+            stockLedger: stockLedgers || [],
+            customerPOs: customerPOs || [],
+            dispatchRecords: outwardDispatches || [],
+            finishedGoods: finishedGoods || [],
+            roles: roles && roles.length > 0 ? roles : get().roles,
+            departments: departments && departments.length > 0 ? departments : get().departments,
+            plants: plants && plants.length > 0 ? plants : get().plants,
+            customers: customers || [],
+            suppliers: suppliers || [],
+            warehouses: warehouses || [],
+            grnEntries: grnEntries || [],
+            auditLogs: auditLogs || [],
+            employees: (users || []).map((u: any) => ({
+              id: u.id,
+              empCode: u.empCode || '',
+              name: u.fullName || u.email,
+              email: u.email,
+              phone: u.phoneNumber || '',
+              role: u.role || 'Worker',
+              plant: u.plant || 'Plant 1 - Pune',
+              department: u.department || 'Final Assembly Line 1',
+              team: u.team || 'Line 1 Alpha',
+              supervisor: u.supervisor || '',
+              status: u.status || 'Active',
+              joiningDate: u.createdAt ? u.createdAt.split('T')[0] : '2026-01-01',
+              workstation: u.workstation,
+              skills: u.skills ? u.skills.split(',').map((s: string) => s.trim()) : [],
+              customPermissions: u.customPermissions || [],
+              revokedPermissions: u.revokedPermissions || [],
+            })),
+          });
+        } catch (err) {
+          console.warn('Failed to initialize store from MySQL backend:', err);
+        }
       },
 
       // Employee Onboarding Actions
@@ -3518,6 +3769,8 @@ export const useMipsStore = create<MipsState>()(
           grnEntries: [],
           customerPOs: [],
           customers: [],
+          suppliers: [],
+          warehouses: [],
           dispatchRecords: [],
           kits: [],
           finishedGoods: [],

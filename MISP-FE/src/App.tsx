@@ -1,9 +1,10 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './utils/ProtectedRoute';
 import PermissionGuard from './components/common/PermissionGuard';
 import Layout from './layouts/Layout';
 import { Loader2 } from 'lucide-react';
+import { useMipsStore } from './store/useMipsStore';
 
 const LandingPage = lazy(() => import('./pages/Landing'));
 const LoginPage = lazy(() => import('./pages/Login'));
@@ -30,6 +31,12 @@ const FullScreenSpinner = () => (
 );
 
 export function App() {
+  const initData = useMipsStore((s) => s.initData);
+
+  useEffect(() => {
+    initData();
+  }, [initData]);
+
   return (
     <Suspense fallback={<FullScreenSpinner />}>
       <Routes>
