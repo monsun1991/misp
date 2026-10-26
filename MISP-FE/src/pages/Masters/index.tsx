@@ -65,75 +65,13 @@ export const MastersPage: React.FC = () => {
   } = useMipsStore();
 
   const [activeTab, setActiveTab] = useState<'materials' | 'products' | 'bom' | 'suppliers' | 'customers' | 'warehouses'>('materials');
-  const [selectedProduct, setSelectedProduct] = useState<Product>(products[0]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(products[0] || null);
 
-  // Suppliers state
-  const [suppliers, setSuppliers] = useState<SupplierItem[]>([
-    {
-      id: 'sup-1',
-      name: 'Lumileds India Components',
-      category: 'Electronics & LEDs',
-      contactPerson: 'Amit Shah',
-      phone: '+91 98230 11223',
-      email: 'sales@lumileds.in',
-      leadTimeAvg: 14,
-    },
-    {
-      id: 'sup-2',
-      name: 'Delta Electronics India',
-      category: 'Power Drivers & SMPS',
-      contactPerson: 'Sunil Rao',
-      phone: '+91 98450 33445',
-      email: 'drivers@delta.co.in',
-      leadTimeAvg: 10,
-    },
-    {
-      id: 'sup-3',
-      name: 'Sunlit Precision Die-Cast',
-      category: 'Aluminium Housings & Optics',
-      contactPerson: 'Karan Mehra',
-      phone: '+91 99220 55667',
-      email: 'orders@sunlit.com',
-      leadTimeAvg: 7,
-    },
-    {
-      id: 'sup-4',
-      name: 'Packwell Corrugations',
-      category: 'Packaging & Cartons',
-      contactPerson: 'Dinesh Joshi',
-      phone: '+91 97110 88990',
-      email: 'packwell@gmail.com',
-      leadTimeAvg: 5,
-    },
-  ]);
+  // Suppliers state (empty by default)
+  const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
 
-  // Warehouses state
-  const [warehouses, setWarehouses] = useState<WarehouseItem[]>([
-    {
-      id: 'wh-1',
-      name: 'Main Raw Material Store',
-      plant: 'Plant 1 - Pune',
-      type: 'Raw Materials & Parts',
-      capacityUnits: 150000,
-      manager: 'Ramesh Sharma',
-    },
-    {
-      id: 'wh-2',
-      name: 'Assembly Line 1 Buffer',
-      plant: 'Plant 1 - Pune',
-      type: 'WIP Kits & Floor Buffer',
-      capacityUnits: 25000,
-      manager: 'Suresh Patil',
-    },
-    {
-      id: 'wh-3',
-      name: 'Finished Goods Packaging Buffer',
-      plant: 'Plant 1 - Pune',
-      type: 'Finished Goods & Packaging',
-      capacityUnits: 50000,
-      manager: 'Ramesh Sharma',
-    },
-  ]);
+  // Warehouses state (empty by default)
+  const [warehouses, setWarehouses] = useState<WarehouseItem[]>([]);
 
   // Modals
   const [showAddMatModal, setShowAddMatModal] = useState(false);
@@ -358,6 +296,7 @@ export const MastersPage: React.FC = () => {
   };
 
   const handleSaveBOM = () => {
+    if (!selectedProduct) return;
     selectedProduct.bom = editingBOM;
 
     // Recalculate standard cost from BOM
@@ -695,7 +634,7 @@ export const MastersPage: React.FC = () => {
             <button
               onClick={() => {
                 setActiveTab('bom');
-                setEditingBOM(selectedProduct.bom || []);
+                setEditingBOM(selectedProduct?.bom || []);
               }}
               className={`text-xs px-3 py-1.5 rounded-md font-medium transition-all ${
                 activeTab === 'bom'
@@ -1024,6 +963,22 @@ export const MastersPage: React.FC = () => {
 
       {/* Tab 3: Interactive Bill of Materials (BOM) Builder & Editor */}
       {activeTab === 'bom' && (
+        products.length === 0 || !selectedProduct ? (
+          <Card className="border border-slate-200 dark:border-slate-800 p-12 text-center">
+            <Layers className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">No Finished Products Found</h3>
+            <p className="text-xs text-slate-500 mb-4 max-w-md mx-auto">
+              Please register at least one finished luminaire in the Products tab first before configuring its Bill of Materials.
+            </p>
+            <Button
+              onClick={() => setActiveTab('products')}
+              size="sm"
+              className="bg-[#183638] text-[#84cc16] hover:bg-[#183638]/90 text-xs font-semibold"
+            >
+              Go to Products Tab
+            </Button>
+          </Card>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="border border-slate-200 dark:border-slate-800">
             <CardHeader className="pb-3">
@@ -1039,7 +994,7 @@ export const MastersPage: React.FC = () => {
                     setEditingBOM(p.bom || []);
                   }}
                   className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    selectedProduct.id === p.id
+                    selectedProduct?.id === p.id
                       ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/30'
                       : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
                   }`}
@@ -1206,6 +1161,7 @@ export const MastersPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+        )
       )}
 
       {/* Tab 4: Suppliers Master */}

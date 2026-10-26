@@ -2,6 +2,25 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { mipsService } from '@/api/services/mips.service';
 
+// Auto-purge legacy demo store data from browser localStorage
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const legacyKeys = [
+      'mips_manufacturing_store_v7',
+      'mips_manufacturing_store_v6',
+      'mips_manufacturing_store_v5',
+      'mips_manufacturing_store_v4',
+      'mips_manufacturing_store_v3',
+      'mips_manufacturing_store_v2',
+      'mips_manufacturing_store_v1',
+      'mips-storage'
+    ];
+    legacyKeys.forEach((key) => window.localStorage.removeItem(key));
+  }
+} catch (e) {
+  // Ignore SSR/storage errors
+}
+
 export interface Material {
   id: string;
   code: string;
@@ -2234,42 +2253,25 @@ const DEFAULT_PLANTS: PlantLocation[] = [
 export const useMipsStore = create<MipsState>()(
   persist(
     (set, get) => ({
-      materials: DEFAULT_MATERIALS,
-      products: DEFAULT_PRODUCTS,
-      stockLedger: DEFAULT_STOCK_LEDGER,
-      purchaseOrders: DEFAULT_PURCHASE_ORDERS,
+      materials: [],
+      products: [],
+      stockLedger: [],
+      purchaseOrders: [],
       grnEntries: [],
-      customerPOs: DEFAULT_CUSTOMER_POS,
-      customers: DEFAULT_CUSTOMERS,
-      dispatchRecords: DEFAULT_DISPATCH_RECORDS,
-      kits: DEFAULT_KITS,
-      finishedGoods: DEFAULT_FINISHED_GOODS,
-      finishedGoodsLedger: DEFAULT_FINISHED_GOODS_LEDGER,
-      productionLogs: DEFAULT_PRODUCTION_LOGS,
+      customerPOs: [],
+      customers: [],
+      dispatchRecords: [],
+      kits: [],
+      finishedGoods: [],
+      finishedGoodsLedger: [],
+      productionLogs: [],
       roles: DEFAULT_ROLES,
       departments: DEFAULT_DEPARTMENTS,
-      employees: DEFAULT_EMPLOYEES,
+      employees: [],
       plants: DEFAULT_PLANTS,
       selectedPlant: 'Plant 1 - Pune Hub',
       setSelectedPlant: (plant) => set({ selectedPlant: plant }),
-      auditLogs: [
-        {
-          id: 'aud-001',
-          timestamp: '2026-10-02 09:30 AM',
-          user: 'store.manager@mips.internal',
-          action: 'KIT_ISSUED',
-          module: 'Kits',
-          details: 'KIT-2026-1001 issued to Ravi Kumar with 100 components.'
-        },
-        {
-          id: 'aud-002',
-          timestamp: '2026-10-02 10:15 AM',
-          user: 'purchase.manager@mips.internal',
-          action: 'PO_DISPATCHED',
-          module: 'Procurement',
-          details: 'PO-2026-089 marked as In Transit with V-Trans Express.'
-        }
-      ],
+      auditLogs: [],
 
       addMaterial: (newMat) => {
         const id = `mat-${Date.now()}`;
@@ -3509,28 +3511,29 @@ export const useMipsStore = create<MipsState>()(
 
       resetToDefaultData: () => {
         set({
-          materials: DEFAULT_MATERIALS,
-          products: DEFAULT_PRODUCTS,
-          stockLedger: DEFAULT_STOCK_LEDGER,
-          purchaseOrders: DEFAULT_PURCHASE_ORDERS,
+          materials: [],
+          products: [],
+          stockLedger: [],
+          purchaseOrders: [],
           grnEntries: [],
-          customerPOs: DEFAULT_CUSTOMER_POS,
-          customers: DEFAULT_CUSTOMERS,
-          dispatchRecords: DEFAULT_DISPATCH_RECORDS,
-          kits: DEFAULT_KITS,
-          finishedGoods: DEFAULT_FINISHED_GOODS,
-          finishedGoodsLedger: DEFAULT_FINISHED_GOODS_LEDGER,
-          productionLogs: DEFAULT_PRODUCTION_LOGS,
+          customerPOs: [],
+          customers: [],
+          dispatchRecords: [],
+          kits: [],
+          finishedGoods: [],
+          finishedGoodsLedger: [],
+          productionLogs: [],
           roles: DEFAULT_ROLES,
           departments: DEFAULT_DEPARTMENTS,
-          employees: DEFAULT_EMPLOYEES,
+          employees: [],
           plants: DEFAULT_PLANTS,
           selectedPlant: 'Plant 1 - Pune Hub',
+          auditLogs: [],
         });
       }
     }),
     {
-      name: 'mips_manufacturing_store_v7',
+      name: 'mips_manufacturing_store_v10_clean',
     }
   )
 );

@@ -48,3 +48,4 @@ export class FinishedGoodEntity extends BaseEntityModel {
   @Column({ type: "varchar", length: 100, default: "Plant 1 - Pune" })
   plant!: string;
 }
+

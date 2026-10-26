@@ -48,3 +48,4 @@ export class CustomerPOEntity extends BaseEntityModel {
   @Column({ type: "text", nullable: true })
   itemsJson?: string;
 }
+
