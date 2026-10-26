@@ -921,11 +921,15 @@ export const OrdersDispatchPage: React.FC = () => {
                               onChange={(e) => handleProductChange(idx, e.target.value)}
                               className="w-full bg-slate-50 dark:bg-slate-800 border rounded-md p-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-[#84cc16]"
                             >
-                              {products.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} {fgsStockByProductId[p.id] ? `(FGS: ${fgsStockByProductId[p.id].toLocaleString()} avail)` : '(FGS: 0)'}
-                                </option>
-                              ))}
+                              {products.length === 0 ? (
+                                <option value="">No products found. Please add products in Master Data first.</option>
+                              ) : (
+                                products.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} {fgsStockByProductId[p.id] ? `(FGS: ${fgsStockByProductId[p.id].toLocaleString()} avail)` : '(FGS: 0)'}
+                                  </option>
+                                ))
+                              )}
                             </select>
                           </td>
                           <td className="py-2 px-3">
@@ -1847,19 +1851,24 @@ export const OrdersDispatchPage: React.FC = () => {
                       className="w-full h-8 bg-white dark:bg-slate-900 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
                       required
                     >
-                      {authorizedEmployees.map((emp) => (
-                        <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                        </option>
-                      ))}
-                      {authorizedEmployees.length === 0 && (
+                      {authorizedEmployees.length === 0 ? (
+                        <option value="">No dispatch officers available. Please onboard staff first.</option>
+                      ) : (
                         <>
-                          <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
-                          <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
-                          <option value="System Super Admin">System Super Admin</option>
+                          <option value="">-- Select Dispatch Incharge --</option>
+                          {authorizedEmployees.map((emp) => (
+                            <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                              {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                            </option>
+                          ))}
                         </>
                       )}
                     </select>
+                    {authorizedEmployees.length === 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ No authorized officers available. Please onboard supervisors in Employees page first.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

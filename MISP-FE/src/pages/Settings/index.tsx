@@ -1260,12 +1260,24 @@ export const SettingsPage: React.FC = () => {
                     onChange={(e) => setDeptPlant(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
                   >
-                    {plants.map((p) => (
-                      <option key={p.id} value={p.name}>
-                        {p.name} ({p.city})
-                      </option>
-                    ))}
+                    {plants.length === 0 ? (
+                      <option value="">No plants available. Please add a plant first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Plant Location --</option>
+                        {plants.map((p) => (
+                          <option key={p.id} value={p.name}>
+                            {p.name} ({p.city})
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
+                  {plants.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ No plants found. Please add a plant in Plants &amp; Facilities tab first.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Department Head / Manager *</label>
@@ -1275,15 +1287,24 @@ export const SettingsPage: React.FC = () => {
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
                     required
                   >
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.name}>
-                        {emp.name} &bull; {emp.role} ({emp.department})
-                      </option>
-                    ))}
-                    {employees.length === 0 && (
-                      <option value="Department Manager">Department Manager</option>
+                    {employees.length === 0 ? (
+                      <option value="">No staff members available. Please onboard staff first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Manager --</option>
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.name}>
+                            {emp.name} &bull; {emp.role} ({emp.department})
+                          </option>
+                        ))}
+                      </>
                     )}
                   </select>
+                  {employees.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ No employees found. Please onboard workforce in Employees page first.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1399,17 +1420,26 @@ export const SettingsPage: React.FC = () => {
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
                     required
                   >
-                    {employees
-                      .filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor'))
-                      .map((emp) => (
-                        <option key={emp.id} value={emp.name}>
-                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                        </option>
-                      ))}
-                    {employees.filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor')).length === 0 && (
-                      <option value="Plant Manager">Plant Manager</option>
+                    {employees.filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor')).length === 0 ? (
+                      <option value="">No plant supervisors available. Please onboard managers first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Plant Head --</option>
+                        {employees
+                          .filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor'))
+                          .map((emp) => (
+                            <option key={emp.id} value={emp.name}>
+                              {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                            </option>
+                          ))}
+                      </>
                     )}
                   </select>
+                  {employees.filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor')).length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ No managers found. Onboard staff in Employees page first.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Warehouse Zones</label>

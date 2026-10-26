@@ -844,14 +844,26 @@ export const FinishedGoodsPage: React.FC = () => {
                 <select
                   value={inwardProductId}
                   onChange={(e) => setInwardProductId(e.target.value)}
-                  className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-slate-900 dark:text-slate-100"
+                  className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-slate-900 dark:text-slate-100 text-xs"
                 >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.code}) - {p.wattage}
-                    </option>
-                  ))}
+                  {products.length === 0 ? (
+                    <option value="">No finished products found. Please add products in Master Data first.</option>
+                  ) : (
+                    <>
+                      <option value="">-- Select Finished Product --</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.code}) - {p.wattage}
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
+                {products.length === 0 && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                    ⚠️ No products available. Please add products in Master Data &gt; Finished Products first.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

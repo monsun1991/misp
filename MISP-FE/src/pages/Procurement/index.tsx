@@ -507,7 +507,7 @@ export const ProcurementPage: React.FC = () => {
 
             <form onSubmit={handleCreatePO} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold mb-1">Select Material</label>
+                <label className="block font-semibold mb-1">Select Material *</label>
                 <select
                   value={newPOMatId}
                   onChange={(e) => {
@@ -518,14 +518,26 @@ export const ProcurementPage: React.FC = () => {
                       setNewPORate(m.standardCost);
                     }
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
                 >
-                  {materials.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.code} - {m.name}
-                    </option>
-                  ))}
+                  {materials.length === 0 ? (
+                    <option value="">No raw materials found. Please add materials in Master Data first.</option>
+                  ) : (
+                    <>
+                      <option value="">-- Select Raw Material --</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.code} - {m.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
+                {materials.length === 0 && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                    ⚠️ No raw materials available. Please add materials in Master Data &gt; Materials first.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -536,15 +548,24 @@ export const ProcurementPage: React.FC = () => {
                   required
                   className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                 >
-                  {allSuppliers.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                  {allSuppliers.length === 0 && (
-                    <option value="Lumileds India Components">Lumileds India Components</option>
+                  {allSuppliers.length === 0 ? (
+                    <option value="">No approved vendors found. Please add suppliers in Master Data first.</option>
+                  ) : (
+                    <>
+                      <option value="">-- Select Supplier / Vendor --</option>
+                      {allSuppliers.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </>
                   )}
                 </select>
+                {allSuppliers.length === 0 && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                    ⚠️ No vendors configured. Please add suppliers in Master Data &gt; Vendors &amp; Warehouses first.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

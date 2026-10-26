@@ -491,18 +491,30 @@ export const ProductionPage: React.FC = () => {
             <form onSubmit={handleLogSubmit} className="flex flex-col min-h-0 flex-1">
               <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
                 <div>
-                  <label className="block font-semibold mb-1">Select Manufactured Product</label>
+                  <label className="block font-semibold mb-1">Select Manufactured Product *</label>
                   <select
                     value={selectedProdId}
                     onChange={(e) => setSelectedProdId(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
                   >
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.code} - {p.name}
-                      </option>
-                    ))}
+                    {products.length === 0 ? (
+                      <option value="">No products found. Please add products in Master Data first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Product --</option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.code} - {p.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
+                  {products.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ No products available. Please add products in Master Data &gt; Finished Products first.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -583,13 +595,24 @@ export const ProductionPage: React.FC = () => {
                       required
                       className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
                     >
-                      <option value="">-- Select Line Operator --</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.name}>
-                          {emp.name} ({emp.role} &bull; {emp.department})
-                        </option>
-                      ))}
+                      {employees.length === 0 ? (
+                        <option value="">No line operators available. Please onboard staff first.</option>
+                      ) : (
+                        <>
+                          <option value="">-- Select Line Operator --</option>
+                          {employees.map((emp) => (
+                            <option key={emp.id} value={emp.name}>
+                              {emp.name} ({emp.role} &bull; {emp.department})
+                            </option>
+                          ))}
+                        </>
+                      )}
                     </select>
+                    {employees.length === 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ No workforce found. Please onboard employees in Employees page first.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block font-semibold mb-1">Floor Supervisor *</label>
@@ -599,21 +622,26 @@ export const ProductionPage: React.FC = () => {
                       required
                       className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
                     >
-                      <option value="">-- Select Floor Supervisor --</option>
-                      {employees
-                        .filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin'))
-                        .map((sup) => (
-                          <option key={sup.id} value={sup.name}>
-                            {sup.name} ({sup.role})
-                          </option>
-                        ))}
-                      {employees.filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin')).length === 0 && (
+                      {employees.filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin')).length === 0 ? (
+                        <option value="">No floor supervisors available. Please onboard supervisors first.</option>
+                      ) : (
                         <>
-                          <option value="Suresh Patil">Suresh Patil (Floor Supervisor)</option>
-                          <option value="Anand Deshmukh">Anand Deshmukh (Plant Manager)</option>
+                          <option value="">-- Select Floor Supervisor --</option>
+                          {employees
+                            .filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin'))
+                            .map((sup) => (
+                              <option key={sup.id} value={sup.name}>
+                                {sup.name} ({sup.role})
+                              </option>
+                            ))}
                         </>
                       )}
                     </select>
+                    {employees.filter((e) => e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin')).length === 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ No supervisors found. Onboard supervisors in Employees page first.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

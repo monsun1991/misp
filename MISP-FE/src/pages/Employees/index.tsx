@@ -129,14 +129,14 @@ export const EmployeesPage: React.FC = () => {
   const [empCode, setEmpCode] = useState(`EMP-${Math.floor(1010 + Math.random() * 900)}`);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+91 ');
-  const [selectedRole, setSelectedRole] = useState(roles[0]?.name || 'Worker');
+  const [selectedRole, setSelectedRole] = useState(roles[0]?.name || '');
   const [modalPlant, setModalPlant] = useState(plants[0]?.name || '');
   const [selectedDept, setSelectedDept] = useState('');
   const [team, setTeam] = useState('');
   const [supervisor, setSupervisor] = useState('');
   const [workstation, setWorkstation] = useState('');
   const [status, setStatus] = useState<'Active' | 'Onboarding' | 'Probation'>('Active');
-  const [skillsStr, setSkillsStr] = useState('Assembly, Testing');
+  const [skillsStr, setSkillsStr] = useState('');
   const [loginPin, setLoginPin] = useState('123456');
 
   // Edit Employee Modal State
@@ -335,8 +335,18 @@ export const EmployeesPage: React.FC = () => {
     if (initialDept) {
       setSelectedDept(initialDept.name);
       setSupervisor(initialDept.manager);
-      setTeam(initialDept.activeTeams?.[0] || 'Line Alpha');
+      setTeam(initialDept.activeTeams?.[0] || '');
+    } else {
+      setSelectedDept('');
+      setSupervisor('');
+      setTeam('');
     }
+    setSelectedRole(roles[0]?.name || '');
+    setName('');
+    setEmail('');
+    setPhone('+91 ');
+    setSkillsStr('');
+    setWorkstation('');
     setEmpCode(`EMP-${Math.floor(1010 + Math.random() * 900)}`);
     setShowOnboardModal(true);
   };
@@ -802,7 +812,7 @@ export const EmployeesPage: React.FC = () => {
                   <label className="block font-semibold mb-1">Official Email</label>
                   <Input
                     type="email"
-                    placeholder="deepak@mips.internal"
+                    placeholder="e.g. employee@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="h-9"
@@ -871,13 +881,26 @@ export const EmployeesPage: React.FC = () => {
                       onChange={(e) => handlePlantChange(e.target.value)}
                       className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-blue-500"
                     >
-                      {plants.map((p) => (
-                        <option key={p.id} value={p.name}>
-                          {p.name} ({p.city})
-                        </option>
-                      ))}
+                      {plants.length === 0 ? (
+                        <option value="">No plants available. Please add a plant in Settings first.</option>
+                      ) : (
+                        <>
+                          <option value="">-- Select Plant Location --</option>
+                          {plants.map((p) => (
+                            <option key={p.id} value={p.name}>
+                              {p.name} ({p.city})
+                            </option>
+                          ))}
+                        </>
+                      )}
                     </select>
-                    <p className="text-[10px] text-slate-500 mt-1">Select plant facility to filter operational units</p>
+                    {plants.length === 0 ? (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ No plants found. Please add a plant in Settings &gt; Plants &amp; Facilities first.
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-500 mt-1">Select plant facility to filter operational units</p>
+                    )}
                   </div>
 
                   <div>
@@ -889,19 +912,34 @@ export const EmployeesPage: React.FC = () => {
                       onChange={(e) => handleDeptChange(e.target.value)}
                       className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-blue-500"
                     >
-                      {filteredDepartments.length === 0 ? (
-                        <option value="">No departments available in this plant</option>
+                      {departments.length === 0 ? (
+                        <option value="">No departments available. Please add a department in Settings first.</option>
+                      ) : filteredDepartments.length === 0 ? (
+                        <option value="">No departments in this plant. Please add one in Settings.</option>
                       ) : (
-                        filteredDepartments.map((d) => (
-                          <option key={d.id} value={d.name}>
-                            {d.name}
-                          </option>
-                        ))
+                        <>
+                          <option value="">-- Select Department --</option>
+                          {filteredDepartments.map((d) => (
+                            <option key={d.id} value={d.name}>
+                              {d.name}
+                            </option>
+                          ))}
+                        </>
                       )}
                     </select>
-                    <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1 font-medium">
-                      {filteredDepartments.length} department{filteredDepartments.length !== 1 ? 's' : ''} in {selectedPlant}
-                    </p>
+                    {departments.length === 0 ? (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ No departments found. Please add a department in Settings &gt; Departments first.
+                      </p>
+                    ) : filteredDepartments.length === 0 ? (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ No departments in this plant. Add one in Settings &gt; Departments.
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1 font-medium">
+                        {filteredDepartments.length} department{filteredDepartments.length !== 1 ? 's' : ''} in {modalPlant || selectedPlant}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -915,7 +953,6 @@ export const EmployeesPage: React.FC = () => {
                       value={supervisor}
                       onChange={(e) => setSupervisor(e.target.value)}
                       className="w-full h-8 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-medium text-slate-900 dark:text-slate-100"
-                      required
                     >
                       {currentDeptObj?.manager && (
                         <option value={currentDeptObj.manager}>
@@ -935,11 +972,19 @@ export const EmployeesPage: React.FC = () => {
                             {emp.name} &bull; {emp.role} ({emp.department})
                           </option>
                         ))}
-                      <option value="System Super Admin">System Super Admin</option>
+                      {employees.length === 0 && (
+                        <option value="">No supervisors available. Please onboard staff first.</option>
+                      )}
                     </select>
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      {currentDeptObj ? `Default: ${currentDeptObj.manager} (${currentDeptObj.name})` : 'Auto-linked to selected department'}
-                    </p>
+                    {employees.length === 0 ? (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ No supervisors found. Onboard supervisors in Employees page first.
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        {currentDeptObj ? `Default: ${currentDeptObj.manager} (${currentDeptObj.name})` : 'Auto-linked to selected department'}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -981,12 +1026,24 @@ export const EmployeesPage: React.FC = () => {
                       onChange={(e) => setSelectedRole(e.target.value)}
                       className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium"
                     >
-                      {roles.map((r) => (
-                        <option key={r.id} value={r.name}>
-                          {r.name}
-                        </option>
-                      ))}
+                      {roles.length === 0 ? (
+                        <option value="">No roles configured. Please add a role in Settings first.</option>
+                      ) : (
+                        <>
+                          <option value="">-- Select Role --</option>
+                          {roles.map((r) => (
+                            <option key={r.id} value={r.name}>
+                              {r.name}
+                            </option>
+                          ))}
+                        </>
+                      )}
                     </select>
+                    {roles.length === 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ No roles configured. Please add a role in Settings &gt; Dynamic Roles first.
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -1375,11 +1432,18 @@ export const EmployeesPage: React.FC = () => {
                     onChange={(e) => setEditEmpPlant(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                   >
-                    {plants.map((p) => (
-                      <option key={p.id} value={p.name}>
-                        {p.name} ({p.city})
-                      </option>
-                    ))}
+                    {plants.length === 0 ? (
+                      <option value="">No plants available. Please add a plant in Settings first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Plant Location --</option>
+                        {plants.map((p) => (
+                          <option key={p.id} value={p.name}>
+                            {p.name} ({p.city})
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -1389,11 +1453,18 @@ export const EmployeesPage: React.FC = () => {
                     onChange={(e) => setEditEmpDept(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                   >
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.name}>
-                        {d.name} ({d.plant || 'All Plants'})
-                      </option>
-                    ))}
+                    {departments.length === 0 ? (
+                      <option value="">No departments available. Please add a department in Settings first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Department --</option>
+                        {departments.map((d) => (
+                          <option key={d.id} value={d.name}>
+                            {d.name} ({d.plant || 'All Plants'})
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
@@ -1406,11 +1477,18 @@ export const EmployeesPage: React.FC = () => {
                     onChange={(e) => setEditEmpRole(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                   >
-                    {roles.map((r) => (
-                      <option key={r.id} value={r.name}>
-                        {r.name}
-                      </option>
-                    ))}
+                    {roles.length === 0 ? (
+                      <option value="">No roles available. Please add a role in Settings first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Role --</option>
+                        {roles.map((r) => (
+                          <option key={r.id} value={r.name}>
+                            {r.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -1439,11 +1517,15 @@ export const EmployeesPage: React.FC = () => {
                     onChange={(e) => setEditEmpSupervisor(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                   >
-                    {employees.map((e) => (
-                      <option key={e.id} value={`${e.name} (${e.role})`}>
-                        {e.name} &bull; {e.role} ({e.plant || 'All Plants'})
-                      </option>
-                    ))}
+                    {employees.length === 0 ? (
+                      <option value="">No staff members available. Please onboard staff first.</option>
+                    ) : (
+                      employees.map((e) => (
+                        <option key={e.id} value={`${e.name} (${e.role})`}>
+                          {e.name} &bull; {e.role} ({e.plant || 'All Plants'})
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
               </div>

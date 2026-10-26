@@ -1172,12 +1172,24 @@ export const InventoryPage: React.FC = () => {
                     onChange={(e) => setSelectedMatId(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 font-medium"
                   >
-                    {materials.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.code} - {m.name} ({m.currentStock} {m.uom})
-                      </option>
-                    ))}
+                    {materials.length === 0 ? (
+                      <option value="">No raw materials found. Please add materials in Master Data first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Material --</option>
+                        {materials.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.code} - {m.name} ({m.currentStock} {m.uom})
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
+                  {materials.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ No raw materials available. Please add materials in Master Data &gt; Materials first.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1189,12 +1201,24 @@ export const InventoryPage: React.FC = () => {
                     onChange={(e) => setTargetWarehouse(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 font-medium"
                   >
-                    {dynamicWarehouses.map((wh) => (
-                      <option key={wh} value={wh}>
-                        {wh}
-                      </option>
-                    ))}
+                    {dynamicWarehouses.length === 0 ? (
+                      <option value="">No warehouses found. Please add a warehouse in Master Data first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Warehouse --</option>
+                        {dynamicWarehouses.map((wh) => (
+                          <option key={wh} value={wh}>
+                            {wh}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
+                  {dynamicWarehouses.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ No warehouses available. Please add a warehouse in Master Data &gt; Vendors &amp; Warehouses first.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1408,19 +1432,24 @@ export const InventoryPage: React.FC = () => {
                     className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
                     required
                   >
-                    {authorizedEmployees.map((emp) => (
-                      <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                        {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                      </option>
-                    ))}
-                    {authorizedEmployees.length === 0 && (
+                    {authorizedEmployees.length === 0 ? (
+                      <option value="">No authorized officers available. Please onboard managers first.</option>
+                    ) : (
                       <>
-                        <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
-                        <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
-                        <option value="System Super Admin">System Super Admin</option>
+                        <option value="">-- Select Authorized Officer --</option>
+                        {authorizedEmployees.map((emp) => (
+                          <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                            {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                          </option>
+                        ))}
                       </>
                     )}
                   </select>
+                  {authorizedEmployees.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ No authorized officers available. Please onboard supervisors/managers in Employees page first.
+                    </p>
+                  )}
                 </div>
               </div>
 

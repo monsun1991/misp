@@ -1635,12 +1635,24 @@ export const MastersPage: React.FC = () => {
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                     required
                   >
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.name}>
-                        {s.name}
-                      </option>
-                    ))}
+                    {suppliers.length === 0 ? (
+                      <option value="">No suppliers found. Please add a vendor first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Supplier --</option>
+                        {suppliers.map((s) => (
+                          <option key={s.id} value={s.name}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
+                  {suppliers.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ Please add a vendor in Vendors tab first.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Assigned Warehouse *</label>
@@ -1650,12 +1662,24 @@ export const MastersPage: React.FC = () => {
                     className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                     required
                   >
-                    {warehouses.map((w) => (
-                      <option key={w.id} value={w.name}>
-                        {w.name} ({w.plant})
-                      </option>
-                    ))}
+                    {warehouses.length === 0 ? (
+                      <option value="">No warehouses found. Please add a warehouse first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Warehouse --</option>
+                        {warehouses.map((w) => (
+                          <option key={w.id} value={w.name}>
+                            {w.name} ({w.plant})
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
+                  {warehouses.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ Please add a warehouse in Warehouses tab first.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1781,19 +1805,24 @@ export const MastersPage: React.FC = () => {
                   className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                   required
                 >
-                  {(employees || []).map((emp) => (
-                    <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                      {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                    </option>
-                  ))}
-                  {(!employees || employees.length === 0) && (
+                  {(!employees || employees.length === 0) ? (
+                    <option value="">No staff members available. Please onboard staff first.</option>
+                  ) : (
                     <>
-                      <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
-                      <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
-                      <option value="Suresh Patil (Floor Supervisor)">Suresh Patil &bull; Floor Supervisor</option>
+                      <option value="">-- Select Warehouse Manager --</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                        </option>
+                      ))}
                     </>
                   )}
                 </select>
+                {(!employees || employees.length === 0) && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                    ⚠️ No staff members available. Please onboard workforce in Employees page first.
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t">
@@ -1897,13 +1926,20 @@ export const MastersPage: React.FC = () => {
                   <select
                     value={editMatSupplier}
                     onChange={(e) => setEditMatSupplier(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
                   >
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.name}>
-                        {s.name}
-                      </option>
-                    ))}
+                    {suppliers.length === 0 ? (
+                      <option value="">No suppliers found. Please add a vendor first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Supplier --</option>
+                        {suppliers.map((s) => (
+                          <option key={s.id} value={s.name}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -1911,13 +1947,20 @@ export const MastersPage: React.FC = () => {
                   <select
                     value={editMatWarehouse}
                     onChange={(e) => setEditMatWarehouse(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
                   >
-                    {warehouses.map((w) => (
-                      <option key={w.id} value={w.name}>
-                        {w.name} ({w.plant})
-                      </option>
-                    ))}
+                    {warehouses.length === 0 ? (
+                      <option value="">No warehouses found. Please add a warehouse first.</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Warehouse --</option>
+                        {warehouses.map((w) => (
+                          <option key={w.id} value={w.name}>
+                            {w.name} ({w.plant})
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
@@ -2244,19 +2287,24 @@ export const MastersPage: React.FC = () => {
                   className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
                   required
                 >
-                  {(employees || []).map((emp) => (
-                    <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                      {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                    </option>
-                  ))}
-                  {(!employees || employees.length === 0) && (
+                  {(!employees || employees.length === 0) ? (
+                    <option value="">No staff members available. Please onboard staff first.</option>
+                  ) : (
                     <>
-                      <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
-                      <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
-                      <option value="Suresh Patil (Floor Supervisor)">Suresh Patil &bull; Floor Supervisor</option>
+                      <option value="">-- Select Warehouse Manager --</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                        </option>
+                      ))}
                     </>
                   )}
                 </select>
+                {(!employees || employees.length === 0) && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                    ⚠️ No staff members available. Please onboard workforce in Employees page first.
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t">
