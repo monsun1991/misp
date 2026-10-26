@@ -119,10 +119,10 @@ export const SettingsPage: React.FC = () => {
     if (!ubacSearchQuery) return true;
     const q = ubacSearchQuery.toLowerCase();
     return (
-      emp.name.toLowerCase().includes(q) ||
-      emp.empCode.toLowerCase().includes(q) ||
-      emp.role.toLowerCase().includes(q) ||
-      emp.department.toLowerCase().includes(q)
+      (emp.name || '').toLowerCase().includes(q) ||
+      (emp.empCode || '').toLowerCase().includes(q) ||
+      (emp.role || '').toLowerCase().includes(q) ||
+      (emp.department || '').toLowerCase().includes(q)
     );
   });
 
@@ -625,9 +625,9 @@ export const SettingsPage: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {departments.map((d) => {
-                  const assignedEmployees = employees.filter(
-                    (e) => e.department && e.department.toLowerCase() === d.name.toLowerCase()
+                {(departments || []).map((d) => {
+                  const assignedEmployees = (employees || []).filter(
+                    (e) => (e.department || '').toLowerCase() === (d.name || '').toLowerCase()
                   );
                   const teams = Array.isArray(d.activeTeams) ? d.activeTeams : [];
 
@@ -1056,12 +1056,12 @@ export const SettingsPage: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {plants.map((plant) => {
+                {(plants || []).map((plant) => {
                   const isSelected = selectedPlant === plant.name;
-                  const deptsInPlant = departments.filter(
+                  const deptsInPlant = (departments || []).filter(
                     (d) =>
-                      d.plant.toLowerCase().includes(plant.name.toLowerCase()) ||
-                      plant.name.toLowerCase().includes(d.plant.toLowerCase())
+                      (d.plant || '').toLowerCase().includes((plant.name || '').toLowerCase()) ||
+                      (plant.name || '').toLowerCase().includes((d.plant || '').toLowerCase())
                   ).length;
 
                   return (
