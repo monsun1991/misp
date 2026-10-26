@@ -36,3 +36,4 @@ export class GRNEntryEntity extends BaseEntityModel {
   @Column({ type: "text", nullable: true })
   itemsJson?: string;
 }
+

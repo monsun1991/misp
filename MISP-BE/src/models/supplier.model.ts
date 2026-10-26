@@ -27,3 +27,4 @@ export class SupplierEntity extends BaseEntityModel {
   @Column({ type: "text", nullable: true })
   address?: string;
 }
+

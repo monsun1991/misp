@@ -17,6 +17,7 @@ export const AppDataSource = new DataSource({
   logging: false,
   // Dynamically auto-load ALL models (even 100+ entities) without manual imports
   entities: [path.join(__dirname, '../models/*.model.{ts,js}')],
+  migrations: [path.join(__dirname, '../migrations/*.{ts,js}')],
 
   timezone: '+05:30',
   dateStrings: true,

@@ -21,3 +21,4 @@ export class AuditLogEntity extends BaseEntityModel {
   @Column({ type: "varchar", length: 100, nullable: true })
   timestamp?: string;
 }
+

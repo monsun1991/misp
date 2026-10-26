@@ -18,3 +18,4 @@ export class DepartmentEntity extends BaseEntityModel {
   @Column({ type: "text", nullable: true })
   activeTeamsJson?: string;
 }
+

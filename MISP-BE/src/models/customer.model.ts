@@ -30,3 +30,4 @@ export class CustomerEntity extends BaseEntityModel {
   @Column({ type: "varchar", length: 150, nullable: true })
   paymentTerms?: string;
 }
+

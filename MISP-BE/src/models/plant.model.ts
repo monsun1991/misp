@@ -30,3 +30,4 @@ export class PlantEntity extends BaseEntityModel {
   @Column({ type: "varchar", length: 50, default: "Active" })
   status!: string;
 }
+

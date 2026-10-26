@@ -18,3 +18,4 @@ export class WarehouseEntity extends BaseEntityModel {
   @Column({ type: "varchar", length: 150, nullable: true })
   manager?: string;
 }
+

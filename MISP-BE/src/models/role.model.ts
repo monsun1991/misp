@@ -15,3 +15,4 @@ export class RoleEntity extends BaseEntityModel {
   @Column({ type: "text", nullable: true })
   permissionsJson?: string;
 }
+

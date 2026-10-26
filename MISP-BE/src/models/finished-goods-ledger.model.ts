@@ -42,3 +42,4 @@ export class FinishedGoodsLedgerEntity extends BaseEntityModel {
   @Column({ type: "text", nullable: true })
   notes?: string;
 }
+
