@@ -17,4 +17,20 @@ router.post("/users", MipsController.createUser);
 router.put("/users/:id", MipsController.updateUser);
 router.delete("/users/:id", MipsController.deleteUser);
 
+// Customer POs & Outward Dispatches
+router.get("/customer-pos", MipsController.getCustomerPOs);
+router.post("/customer-pos", MipsController.createCustomerPO);
+router.get("/outward-dispatches", MipsController.getOutwardDispatches);
+router.post("/outward-dispatches", MipsController.createOutwardDispatch);
+
+// Finished Goods Inventory
+router.get("/finished-goods", MipsController.getFinishedGoods);
+router.post("/finished-goods", MipsController.createFinishedGood);
+
+// Stock Ledgers & Production Logs
+router.get("/stock-ledgers", MipsController.getStockLedgers);
+router.post("/stock-ledgers", MipsController.createStockLedger);
+router.get("/production-logs", MipsController.getProductionLogs);
+router.post("/production-logs", MipsController.createProductionLog);
+
 export default router;

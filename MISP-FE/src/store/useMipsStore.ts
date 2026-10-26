@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { mipsService } from '@/api/services/mips.service';
 
 export interface Material {
   id: string;
@@ -2549,6 +2550,24 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.createCustomerPO({
+          customerPoNumber: newPO.customerPoNumber,
+          customerName: newPO.customerName,
+          customerGst: newPO.customerGst,
+          billingCity: newPO.billingCity,
+          poDate: newPO.poDate,
+          expectedDispatchDate: newPO.expectedDispatchDate,
+          totalAmount: newPO.totalAmount,
+          totalOrderedQty: newPO.totalOrderedQty,
+          totalDispatchedQty: newPO.totalDispatchedQty,
+          totalPendingQty: newPO.totalPendingQty,
+          status: newPO.status,
+          uploadedFileName: newPO.uploadedFileName,
+          notes: newPO.notes,
+          plant: newPO.plant,
+          items: newPO.items,
+        }).catch((err) => console.warn('Failed to sync Customer PO to MySQL:', err));
       },
 
       updateCustomerPO: (id, updates) => {
@@ -2709,6 +2728,21 @@ export const useMipsStore = create<MipsState>()(
             ...state.auditLogs
           ]
         }));
+
+        mipsService.createOutwardDispatch({
+          dispatchNo: newDispatch.dispatchNo,
+          customerPoId: newDispatch.customerPoId,
+          customerPoNumber: newDispatch.customerPoNumber,
+          customerName: newDispatch.customerName,
+          dispatchDate: new Date().toISOString().split('T')[0],
+          transporter: newDispatch.transporter,
+          vehicleNumber: newDispatch.vehicleNo,
+          ewayBillNumber: newDispatch.ewayBillNo,
+          totalDispatchedUnits: newDispatch.totalUnits,
+          notes: newDispatch.notes,
+          plant: newDispatch.plant,
+          items: newDispatch.items,
+        }).catch((err) => console.warn('Failed to sync Outward Dispatch to MySQL:', err));
       },
 
       closeCustomerPO: (id, reason, user = 'Plant Dispatch Head') => {

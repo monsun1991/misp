@@ -6,3 +6,6 @@ export * from "./purchase-order.model";
 export * from "./kit.model";
 export * from "./stock-ledger.model";
 export * from "./production-log.model";
+export * from "./customer-po.model";
+export * from "./outward-dispatch.model";
+export * from "./finished-good.model";

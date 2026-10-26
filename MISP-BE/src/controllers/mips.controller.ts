@@ -4,6 +4,11 @@ import { MaterialEntity } from "../models/material.model";
 import { ProductEntity } from "../models/product.model";
 import { PurchaseOrderEntity } from "../models/purchase-order.model";
 import { KitEntity } from "../models/kit.model";
+import { StockLedgerEntity } from "../models/stock-ledger.model";
+import { ProductionLogEntity } from "../models/production-log.model";
+import { CustomerPOEntity } from "../models/customer-po.model";
+import { OutwardDispatchEntity } from "../models/outward-dispatch.model";
+import { FinishedGoodEntity } from "../models/finished-good.model";
 import { User } from "../models/user.model";
 import bcrypt from "bcrypt";
 import { formatUserProfile, computeUserPermissions } from "../utils/rbac.util";
@@ -255,6 +260,146 @@ export class MipsController {
       const { id } = req.params;
       await repo.delete(id);
       res.status(200).json({ success: true, message: "User deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // Customer Sales POs
+  static async getCustomerPOs(_req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(CustomerPOEntity);
+      const pos = await repo.find({ order: { createdAt: "DESC" } });
+      const formatted = pos.map((p) => ({
+        ...p,
+        items: p.itemsJson ? JSON.parse(p.itemsJson) : [],
+      }));
+      res.status(200).json({ success: true, data: formatted });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  static async createCustomerPO(req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(CustomerPOEntity);
+      const poData = { ...req.body };
+      if (Array.isArray(poData.items)) {
+        poData.itemsJson = JSON.stringify(poData.items);
+        delete poData.items;
+      }
+      const po = repo.create(poData as Partial<CustomerPOEntity>);
+      const saved: any = await repo.save(po as any);
+      res.status(201).json({
+        success: true,
+        data: {
+          ...saved,
+          items: saved.itemsJson ? JSON.parse(saved.itemsJson) : [],
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // Outward Dispatches
+  static async getOutwardDispatches(_req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(OutwardDispatchEntity);
+      const dispatches = await repo.find({ order: { createdAt: "DESC" } });
+      const formatted = dispatches.map((d) => ({
+        ...d,
+        items: d.itemsJson ? JSON.parse(d.itemsJson) : [],
+      }));
+      res.status(200).json({ success: true, data: formatted });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  static async createOutwardDispatch(req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(OutwardDispatchEntity);
+      const dispatchData = { ...req.body };
+      if (Array.isArray(dispatchData.items)) {
+        dispatchData.itemsJson = JSON.stringify(dispatchData.items);
+        delete dispatchData.items;
+      }
+      const dispatch = repo.create(dispatchData as Partial<OutwardDispatchEntity>);
+      const saved: any = await repo.save(dispatch as any);
+      res.status(201).json({
+        success: true,
+        data: {
+          ...saved,
+          items: saved.itemsJson ? JSON.parse(saved.itemsJson) : [],
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // Finished Goods Inventory
+  static async getFinishedGoods(_req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(FinishedGoodEntity);
+      const goods = await repo.find({ order: { createdAt: "DESC" } });
+      res.status(200).json({ success: true, data: goods });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  static async createFinishedGood(req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(FinishedGoodEntity);
+      const good = repo.create(req.body);
+      const saved = await repo.save(good);
+      res.status(201).json({ success: true, data: saved });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // Stock Ledgers
+  static async getStockLedgers(_req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(StockLedgerEntity);
+      const ledgers = await repo.find({ order: { createdAt: "DESC" }, take: 100 });
+      res.status(200).json({ success: true, data: ledgers });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  static async createStockLedger(req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(StockLedgerEntity);
+      const entry = repo.create(req.body);
+      const saved = await repo.save(entry);
+      res.status(201).json({ success: true, data: saved });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // Production Logs
+  static async getProductionLogs(_req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(ProductionLogEntity);
+      const logs = await repo.find({ order: { createdAt: "DESC" } });
+      res.status(200).json({ success: true, data: logs });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  static async createProductionLog(req: Request, res: Response) {
+    try {
+      const repo = AppDataSource.getRepository(ProductionLogEntity);
+      const log = repo.create(req.body);
+      const saved = await repo.save(log);
+      res.status(201).json({ success: true, data: saved });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
     }

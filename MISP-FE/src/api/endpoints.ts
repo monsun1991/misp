@@ -24,5 +24,10 @@ export const API_ENDPOINTS = {
         purchaseOrders: `${BASE_URL}/mips/purchase-orders`,
         kits: `${BASE_URL}/mips/kits`,
         summary: `${BASE_URL}/mips/summary`,
+        customerPOs: `${BASE_URL}/mips/customer-pos`,
+        outwardDispatches: `${BASE_URL}/mips/outward-dispatches`,
+        finishedGoods: `${BASE_URL}/mips/finished-goods`,
+        stockLedgers: `${BASE_URL}/mips/stock-ledgers`,
+        productionLogs: `${BASE_URL}/mips/production-logs`,
     }
 };
