@@ -5,7 +5,7 @@ import { Home, AlertCircle } from 'lucide-react';
 export const NotFoundPage: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center bg-gray-50 dark:bg-gray-950 font-sans">
-      <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
+      <div className="w-16 h-16 rounded-2xl bg-lime-500/10 text-[#84cc16] flex items-center justify-center mb-4 border border-[#84cc16]/20">
         <AlertCircle className="w-8 h-8" />
       </div>
       <h1 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
@@ -19,7 +19,7 @@ export const NotFoundPage: React.FC = () => {
       </p>
       <Link
         to="/dashboard"
-        className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors shadow-sm"
+        className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#84cc16] hover:bg-[#72b012] text-[#143234] text-sm font-bold transition-all shadow-md shadow-[#84cc16]/20"
       >
         <Home className="w-4 h-4" />
         <span>Return to Dashboard</span>

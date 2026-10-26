@@ -175,7 +175,7 @@ export const LandingPage: React.FC = () => {
             {isAuthenticated ? (
               <Link 
                 to="/dashboard" 
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-all"
+                className="px-4 py-2 rounded-xl bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs flex items-center gap-1.5 shadow-md shadow-[#84cc16]/20 transition-all"
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Open Dashboard</span>
