@@ -9,6 +9,7 @@
     "clean": "rm -rf build dist",
     "rebuild": "npm run clean && npm run build",
     "seed:setup": "ts-node src/scripts/setup-seed.ts",
+    "seed:demo": "ts-node -e 'import(\"./src/scripts/seed-mips\").then(m => m.seedMipsInitialData())'",
     "typeorm": "typeorm-ts-node-commonjs -d src/config/data-source.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/data-source.ts",

@@ -81,12 +81,9 @@ app.use(errorHandler);
 
 const PORT = parseInt(process.env.PORT || "4001", 10);
 
-import { seedMipsInitialData } from "./scripts/seed-mips";
-
 AppDataSource.initialize()
   .then(async () => {
     console.log("✅ MySQL Database connected successfully");
-    await seedMipsInitialData();
     httpServer.listen(PORT, () => {
       console.log(`🚀 MIPS-BE server running on port ${PORT}`);
     });
