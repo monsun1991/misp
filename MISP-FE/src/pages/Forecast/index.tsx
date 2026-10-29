@@ -15,7 +15,7 @@ import {
   Filter,
   X
 } from 'lucide-react';
-import { useMipsStore, isPlantMatch } from '@/store/useMipsStore';
+import { useMipsStore, isPlantMatch, getDynamicWattages } from '@/store/useMipsStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,7 @@ export const ForecastPage: React.FC = () => {
     purchaseOrders: rawPurchaseOrders,
     products: rawProducts,
     selectedPlant,
+    wattages,
     createPurchaseOrder
   } = useMipsStore();
 
@@ -63,6 +64,8 @@ export const ForecastPage: React.FC = () => {
     });
     return ['All', ...Array.from(set)];
   }, [materials]);
+
+  const dynamicWattages = useMemo(() => getDynamicWattages(wattages, products), [wattages, products]);
 
   // Wattage component mapping: material IDs that belong to products with the selected wattage
   const wattageMaterialIds = useMemo(() => {
@@ -363,12 +366,9 @@ export const ForecastPage: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Wattages</SelectItem>
-                <SelectItem value="5W">5W Components</SelectItem>
-                <SelectItem value="9W">9W Components</SelectItem>
-                <SelectItem value="12W">12W Components</SelectItem>
-                <SelectItem value="15W">15W Components</SelectItem>
-                <SelectItem value="20W">20W Components</SelectItem>
-                <SelectItem value="50W">50W Components</SelectItem>
+                {dynamicWattages.map((w) => (
+                  <SelectItem key={w} value={w}>{w} Components</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

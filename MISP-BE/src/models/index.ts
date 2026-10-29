@@ -18,3 +18,5 @@ export * from "./warehouse.model";
 export * from "./grn-entry.model";
 export * from "./audit-log.model";
 export * from "./finished-goods-ledger.model";
+export * from "./category.model";
+export * from "./wattage.model";

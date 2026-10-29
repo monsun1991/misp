@@ -13,7 +13,7 @@ import {
   ArrowRight,
   ClipboardList
 } from 'lucide-react';
-import { useMipsStore, ProductionKit, KitItem, isPlantMatch } from '@/store/useMipsStore';
+import { useMipsStore, ProductionKit, KitItem, isPlantMatch, getDynamicWattages } from '@/store/useMipsStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,7 @@ export const KitsPage: React.FC = () => {
     departments: rawDepartments,
     employees: rawEmployees,
     selectedPlant,
+    wattages,
     createKit,
     recordKitProgress,
     reconcileAndCloseKit
@@ -221,6 +222,8 @@ export const KitsPage: React.FC = () => {
   const [wattageFilter, setWattageFilter] = useState('All');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  const dynamicWattages = React.useMemo(() => getDynamicWattages(wattages, products), [wattages, products]);
 
   const filteredKits = React.useMemo(() => {
     return kits.filter((kit) => {
@@ -430,12 +433,9 @@ export const KitsPage: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All">All Wattages</SelectItem>
-                    <SelectItem value="5W">5W</SelectItem>
-                    <SelectItem value="9W">9W</SelectItem>
-                    <SelectItem value="12W">12W</SelectItem>
-                    <SelectItem value="15W">15W</SelectItem>
-                    <SelectItem value="20W">20W</SelectItem>
-                    <SelectItem value="50W">50W</SelectItem>
+                    {dynamicWattages.map((w) => (
+                      <SelectItem key={w} value={w}>{w}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -738,26 +738,23 @@ export const KitsPage: React.FC = () => {
             <form onSubmit={handleCreateKitSubmit} className="flex flex-col min-h-0 flex-1">
               <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
                 <div>
-                  <label className="block font-semibold mb-1">Select Product to Assemble</label>
-                  <select
+                  <label className="block font-semibold mb-1">Select Product to Assemble *</label>
+                  <Select
                     value={selectedProdId}
-                    onChange={(e) => setSelectedProdId(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
-                    required
+                    onValueChange={(val) => setSelectedProdId(val)}
+                    disabled={(products || []).length === 0}
                   >
-                    {(products || []).length === 0 ? (
-                      <option value="">No products available. Please add products in Masters first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Product to Assemble --</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.code} - {p.name} ({p.wattage || p.category})
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={(products || []).length === 0 ? "No products available" : "-- Select Product to Assemble --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(products || []).map((p) => (
+                        <SelectItem key={p.id} value={p.id} className="text-xs">
+                          {p.code} - {p.name} ({p.wattage || p.category})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {(products || []).length === 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                       ⚠️ No products registered. Please register products in Masters &gt; Finished Products tab first.
@@ -767,7 +764,7 @@ export const KitsPage: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold mb-1">Batch Output Quantity</label>
+                    <label className="block font-semibold mb-1">Batch Output Quantity *</label>
                     <Input
                       type="number"
                       min="1"
@@ -779,68 +776,87 @@ export const KitsPage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block font-semibold mb-1">Production Department</label>
-                    <select
+                    <Select
                       value={departmentName}
-                      onChange={(e) => setDepartmentName(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                      onValueChange={(val) => setDepartmentName(val)}
+                      disabled={(departments || []).length === 0}
                     >
-                      {(departments || []).length === 0 ? (
-                        <option value="">No departments available</option>
-                      ) : (
-                        departments.map((dept) => (
-                          <option key={dept.id} value={dept.name}>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder={(departments || []).length === 0 ? "No departments available" : "-- Select Department --"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(departments || []).map((dept) => (
+                          <SelectItem key={dept.id} value={dept.name} className="text-xs">
                             {dept.name} ({dept.plant || 'Main Plant'})
-                          </option>
-                        ))
-                      )}
-                    </select>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {(departments || []).length === 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ Please add departments in Settings &gt; Departments first.
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold mb-1">Assign to Operator / Worker</label>
-                    <select
+                    <label className="block font-semibold mb-1">Assign to Operator / Worker *</label>
+                    <Select
                       value={assignedWorker}
-                      onChange={(e) => {
-                        setAssignedWorker(e.target.value);
-                        const emp = employees.find((x) => x.name === e.target.value);
+                      onValueChange={(val) => {
+                        setAssignedWorker(val);
+                        const emp = employees.find((x) => x.name === val);
                         if (emp?.department) setDepartmentName(emp.department);
                         if (emp?.supervisor) setSupervisorName(emp.supervisor);
                       }}
-                      required
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                      disabled={(employees || []).length === 0}
                     >
-                      {(employees || []).length === 0 ? (
-                        <option value="">No employees available</option>
-                      ) : (
-                        employees.map((emp) => (
-                          <option key={emp.id} value={emp.name}>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder={(employees || []).length === 0 ? "No employees available" : "-- Select Operator --"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(employees || []).map((emp) => (
+                          <SelectItem key={emp.id} value={emp.name} className="text-xs">
                             {emp.name} &bull; {emp.role} ({emp.department})
-                          </option>
-                        ))
-                      )}
-                    </select>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {(employees || []).length === 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                        ⚠️ Please onboard employees in Employees directory first.
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="block font-semibold mb-1">Responsible Supervisor</label>
-                    <select
+                    <label className="block font-semibold mb-1">Responsible Supervisor *</label>
+                    <Select
                       value={supervisorName}
-                      onChange={(e) => setSupervisorName(e.target.value)}
-                      required
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                      onValueChange={(val) => setSupervisorName(val)}
+                      disabled={(employees || []).length === 0}
                     >
-                      {employees
-                        .filter((e) => (e.role || '').includes('Supervisor') || (e.role || '').includes('Manager') || (e.role || '').includes('Admin'))
-                        .map((sup) => (
-                          <option key={sup.id} value={`${sup.name} (${sup.role})`}>
-                            {sup.name} ({sup.role})
-                          </option>
-                        ))}
-                      {employees.filter((e) => (e.role || '').includes('Supervisor') || (e.role || '').includes('Manager') || (e.role || '').includes('Admin')).length === 0 && (
-                        <option value="Supervisor">Supervisor</option>
-                      )}
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder={(employees || []).length === 0 ? "No supervisors available" : "-- Select Supervisor --"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees
+                          .filter((e) => (e.role || '').includes('Supervisor') || (e.role || '').includes('Manager') || (e.role || '').includes('Admin'))
+                          .map((sup) => (
+                            <SelectItem key={sup.id} value={`${sup.name} (${sup.role})`} className="text-xs">
+                              {sup.name} ({sup.role})
+                            </SelectItem>
+                          ))}
+                        {employees.filter((e) => (e.role || '').includes('Supervisor') || (e.role || '').includes('Manager') || (e.role || '').includes('Admin')).length === 0 && employees.length > 0 && (
+                          employees.map((e) => (
+                            <SelectItem key={e.id} value={`${e.name} (${e.role})`} className="text-xs">
+                              {e.name} ({e.role})
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

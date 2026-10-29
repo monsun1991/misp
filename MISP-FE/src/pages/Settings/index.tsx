@@ -31,6 +31,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const AVAILABLE_PERMISSIONS = [
   { id: 'inventory.view', label: 'View Stock Balances & Locations', category: 'Inventory' },
@@ -1333,24 +1340,22 @@ export const SettingsPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Plant Location</label>
-                  <select
+                  <Select
                     value={deptPlant}
-                    onChange={(e) => setDeptPlant(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    onValueChange={(val) => setDeptPlant(val)}
+                    disabled={plants.length === 0}
                   >
-                    {plants.length === 0 ? (
-                      <option value="">No plants available. Please add a plant first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Plant Location / Unassigned --</option>
-                        {plants.map((p) => (
-                          <option key={p.id} value={p.name}>
-                            {p.name} ({p.city})
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={plants.length === 0 ? "No plants available" : "-- Select Plant / Unassigned --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plants.map((p) => (
+                        <SelectItem key={p.id} value={p.name} className="text-xs">
+                          {p.name} ({p.city})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {plants.length === 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                       ⚠️ No plants found. Please add a plant in Plants &amp; Facilities tab first.
@@ -1359,18 +1364,22 @@ export const SettingsPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Department Head / Manager</label>
-                  <select
+                  <Select
                     value={deptManager}
-                    onChange={(e) => setDeptManager(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
+                    onValueChange={(val) => setDeptManager(val)}
+                    disabled={employees.length === 0}
                   >
-                    <option value="">-- Select Manager / Unassigned --</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.name}>
-                        {emp.name} &bull; {emp.role} ({emp.department || 'No Dept'})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={employees.length === 0 ? "No staff onboarded" : "-- Select Manager / Unassigned --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.name} className="text-xs">
+                          {emp.name} &bull; {emp.role} ({emp.department || 'No Dept'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {employees.length === 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                       ⚠️ No staff onboarded yet. You can assign a manager later.
@@ -1469,43 +1478,44 @@ export const SettingsPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Facility Type</label>
-                  <select
+                  <Select
                     value={plantType}
-                    onChange={(e) => setPlantType(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                    onValueChange={(val) => setPlantType(val)}
                   >
-                    <option value="Full Manufacturing & SMT">Full Manufacturing & SMT Lines</option>
-                    <option value="Assembly & Staging">Assembly & Staging Hub</option>
-                    <option value="Distribution Warehouse">Distribution & Raw Material Warehouse</option>
-                    <option value="Testing & QC Lab">Photometric Testing & Aging Lab</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Facility Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full Manufacturing & SMT" className="text-xs">Full Manufacturing & SMT Lines</SelectItem>
+                      <SelectItem value="Assembly & Staging" className="text-xs">Assembly & Staging Hub</SelectItem>
+                      <SelectItem value="Distribution Warehouse" className="text-xs">Distribution & Raw Material Warehouse</SelectItem>
+                      <SelectItem value="Testing & QC Lab" className="text-xs">Photometric Testing & Aging Lab</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Plant Head / Manager *</label>
-                  <select
+                  <Select
                     value={plantManager}
-                    onChange={(e) => setPlantManager(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
-                    required
+                    onValueChange={(val) => setPlantManager(val)}
+                    disabled={employees.filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor')).length === 0}
                   >
-                    {employees.filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor')).length === 0 ? (
-                      <option value="">No plant supervisors available. Please onboard managers first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Plant Head --</option>
-                        {employees
-                          .filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor'))
-                          .map((emp) => (
-                            <option key={emp.id} value={emp.name}>
-                              {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                            </option>
-                          ))}
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={employees.filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor')).length === 0 ? "No managers found" : "-- Select Plant Head --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees
+                        .filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor'))
+                        .map((emp) => (
+                          <SelectItem key={emp.id} value={emp.name} className="text-xs">
+                            {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                   {employees.filter((e) => e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes('Supervisor')).length === 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                       ⚠️ No managers found. Onboard staff in Employees page first.
@@ -1536,14 +1546,18 @@ export const SettingsPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1">Operational Status</label>
-                <select
+                <Select
                   value={plantStatus}
-                  onChange={(e) => setPlantStatus(e.target.value as any)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                  onValueChange={(val: any) => setPlantStatus(val)}
                 >
-                  <option value="Active">Active Operational Facility</option>
-                  <option value="Commissioning">Under Commissioning / Setup</option>
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder="Operational Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active" className="text-xs">Active Operational Facility</SelectItem>
+                    <SelectItem value="Commissioning" className="text-xs">Under Commissioning / Setup</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -1598,33 +1612,41 @@ export const SettingsPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Plant Location</label>
-                  <select
+                  <Select
                     value={editDeptPlant}
-                    onChange={(e) => setEditDeptPlant(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    onValueChange={(val) => setEditDeptPlant(val)}
+                    disabled={plants.length === 0}
                   >
-                    <option value="">-- Select Plant / Unassigned --</option>
-                    {plants.map((p) => (
-                      <option key={p.id} value={p.name}>
-                        {p.name} ({p.city})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={plants.length === 0 ? "No plants available" : "-- Select Plant / Unassigned --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plants.map((p) => (
+                        <SelectItem key={p.id} value={p.name} className="text-xs">
+                          {p.name} ({p.city})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Department Head / Manager</label>
-                  <select
+                  <Select
                     value={editDeptManager}
-                    onChange={(e) => setEditDeptManager(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    onValueChange={(val) => setEditDeptManager(val)}
+                    disabled={employees.length === 0}
                   >
-                    <option value="">-- Select Manager / Unassigned --</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.name}>
-                        {emp.name} &bull; {emp.role} ({emp.department || 'No Dept'})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={employees.length === 0 ? "No staff onboarded" : "-- Select Manager / Unassigned --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.name} className="text-xs">
+                          {emp.name} &bull; {emp.role} ({emp.department || 'No Dept'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -1699,31 +1721,39 @@ export const SettingsPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Operating Facility Type</label>
-                  <select
+                  <Select
                     value={editPlantType}
-                    onChange={(e) => setEditPlantType(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    onValueChange={(val) => setEditPlantType(val)}
                   >
-                    <option value="Full Manufacturing & SMT">Full Manufacturing & SMT</option>
-                    <option value="Die-Cast & Heavy Assembly">Die-Cast & Heavy Assembly</option>
-                    <option value="Assembly & Final Packaging Hub">Assembly & Final Packaging Hub</option>
-                    <option value="Regional Finished Goods Depot">Regional Finished Goods Depot</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Facility Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full Manufacturing & SMT" className="text-xs">Full Manufacturing & SMT</SelectItem>
+                      <SelectItem value="Die-Cast & Heavy Assembly" className="text-xs">Die-Cast & Heavy Assembly</SelectItem>
+                      <SelectItem value="Assembly & Final Packaging Hub" className="text-xs">Assembly & Final Packaging Hub</SelectItem>
+                      <SelectItem value="Regional Finished Goods Depot" className="text-xs">Regional Finished Goods Depot</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Plant Head / General Manager *</label>
-                  <select
+                  <Select
                     value={editPlantManager}
-                    onChange={(e) => setEditPlantManager(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                    required
+                    onValueChange={(val) => setEditPlantManager(val)}
+                    disabled={employees.length === 0}
                   >
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.name}>
-                        {emp.name} &bull; {emp.role}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={employees.length === 0 ? "No employees available" : "-- Select Manager --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.name} className="text-xs">
+                          {emp.name} &bull; {emp.role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

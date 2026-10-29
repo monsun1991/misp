@@ -12,10 +12,11 @@ import {
   Save,
   Sliders,
   Sparkles,
-  Edit2
+  Edit2,
+  Zap,
 } from 'lucide-react';
-import { useMipsStore } from '@/store/useMipsStore';
-import type { Material, Product, BOMItem, Customer } from '@/store/useMipsStore';
+import { useMipsStore, getDynamicWattages } from '@/store/useMipsStore';
+import type { Material, Product, BOMItem, Customer, MasterWattage } from '@/store/useMipsStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -72,9 +73,13 @@ export const MastersPage: React.FC = () => {
     addWarehouse,
     updateWarehouse,
     deleteWarehouse,
+    wattages,
+    addWattage,
+    updateWattage,
+    deleteWattage,
   } = useMipsStore();
 
-  const [activeTab, setActiveTab] = useState<'materials' | 'products' | 'bom' | 'suppliers' | 'customers' | 'warehouses'>('materials');
+  const [activeTab, setActiveTab] = useState<'materials' | 'products' | 'bom' | 'suppliers' | 'customers' | 'warehouses' | 'wattages'>('materials');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(products[0] || null);
 
   // Modals
@@ -82,6 +87,46 @@ export const MastersPage: React.FC = () => {
   const [showAddProdModal, setShowAddProdModal] = useState(false);
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
   const [showAddWarehouseModal, setShowAddWarehouseModal] = useState(false);
+  const [showAddWattageModal, setShowAddWattageModal] = useState(false);
+  const [showEditWattageModal, setShowEditWattageModal] = useState(false);
+
+  // Dynamic Wattages from Master Table & Fallbacks
+  const dynamicWattageList: MasterWattage[] = React.useMemo(() => {
+    if (wattages && wattages.length > 0) {
+      return [...wattages].sort((a, b) => (Number(a.numericWatts) || 0) - (Number(b.numericWatts) || 0));
+    }
+    const defaults: MasterWattage[] = [
+      { id: 'w-3', name: '3W', numericWatts: 3, description: 'Compact / Night / Indicator Luminaire', status: 'Active' },
+      { id: 'w-5', name: '5W', numericWatts: 5, description: 'Low-Wattage Decorative / Spot LED', status: 'Active' },
+      { id: 'w-7', name: '7W', numericWatts: 7, description: '7W Standard Accent LED', status: 'Active' },
+      { id: 'w-9', name: '9W', numericWatts: 9, description: '9W Standard Domestic LED Bulb', status: 'Active' },
+      { id: 'w-10', name: '10W', numericWatts: 10, description: '10W High Efficiency Downlight', status: 'Active' },
+      { id: 'w-12', name: '12W', numericWatts: 12, description: '12W High-Lumen Bulb & Panel', status: 'Active' },
+      { id: 'w-15', name: '15W', numericWatts: 15, description: '15W Commercial Downlight / Batten', status: 'Active' },
+      { id: 'w-18', name: '18W', numericWatts: 18, description: '18W Heavy-Duty Batten / Downlight', status: 'Active' },
+      { id: 'w-20', name: '20W', numericWatts: 20, description: '20W Industrial Batten & Flood', status: 'Active' },
+      { id: 'w-24', name: '24W', numericWatts: 24, description: '24W Architectural Panel', status: 'Active' },
+      { id: 'w-30', name: '30W', numericWatts: 30, description: '30W Commercial Floodlight', status: 'Active' },
+      { id: 'w-36', name: '36W', numericWatts: 36, description: '36W 2x2 Office Troffer', status: 'Active' },
+      { id: 'w-40', name: '40W', numericWatts: 40, description: '40W Commercial Batten', status: 'Active' },
+      { id: 'w-50', name: '50W', numericWatts: 50, description: '50W High-Mast Floodlight', status: 'Active' },
+      { id: 'w-100', name: '100W', numericWatts: 100, description: '100W Industrial High-Bay / Street', status: 'Active' }
+    ];
+    return defaults;
+  }, [wattages]);
+
+  // Wattage form states
+  const [newWattageName, setNewWattageName] = useState('');
+  const [newWattageNumeric, setNewWattageNumeric] = useState<number>(12);
+  const [newWattageDesc, setNewWattageDesc] = useState('');
+  const [newWattageStatus, setNewWattageStatus] = useState<'Active' | 'Inactive'>('Active');
+
+  const [editingWattageId, setEditingWattageId] = useState('');
+  const [editWattageName, setEditWattageName] = useState('');
+  const [editWattageNumeric, setEditWattageNumeric] = useState<number>(12);
+  const [editWattageDesc, setEditWattageDesc] = useState('');
+  const [editWattageStatus, setEditWattageStatus] = useState<'Active' | 'Inactive'>('Active');
+  const [wattageSearch, setWattageSearch] = useState('');
 
   // Dynamic Material & Product Categories from Master Table & State
   const dynamicMaterialCategories = React.useMemo(() => {
@@ -614,6 +659,50 @@ export const MastersPage: React.FC = () => {
     setShowEditCustModal(false);
   };
 
+  const handleOpenEditWattage = (w: MasterWattage) => {
+    setEditingWattageId(w.id);
+    setEditWattageName(w.name);
+    setEditWattageNumeric(Number(w.numericWatts) || 0);
+    setEditWattageDesc(w.description || '');
+    setEditWattageStatus(w.status || 'Active');
+    setShowEditWattageModal(true);
+  };
+
+  const handleSaveAddWattage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWattageName.trim()) return;
+    const formattedName = newWattageName.trim().toUpperCase().endsWith('W')
+      ? newWattageName.trim().toUpperCase()
+      : `${newWattageName.trim()}W`;
+    const numWatts = newWattageNumeric || parseFloat(formattedName.replace(/[^0-9.]/g, '')) || 0;
+    await addWattage({
+      name: formattedName,
+      numericWatts: numWatts,
+      description: newWattageDesc.trim(),
+      status: newWattageStatus,
+    });
+    setNewWattageName('');
+    setNewWattageDesc('');
+    setNewWattageNumeric(12);
+    setShowAddWattageModal(false);
+  };
+
+  const handleSaveEditWattage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWattageId) return;
+    const formattedName = editWattageName.trim().toUpperCase().endsWith('W')
+      ? editWattageName.trim().toUpperCase()
+      : `${editWattageName.trim()}W`;
+    const numWatts = editWattageNumeric || parseFloat(formattedName.replace(/[^0-9.]/g, '')) || 0;
+    await updateWattage(editingWattageId, {
+      name: formattedName,
+      numericWatts: numWatts,
+      description: editWattageDesc.trim(),
+      status: editWattageStatus,
+    });
+    setShowEditWattageModal(false);
+  };
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
@@ -669,6 +758,16 @@ export const MastersPage: React.FC = () => {
             </Button>
           )}
 
+          {activeTab === 'wattages' && (
+            <Button
+              onClick={() => setShowAddWattageModal(true)}
+              className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold text-xs shadow-md shadow-[#84cc16]/25 border border-[#84cc16]"
+            >
+              <PlusCircle className="w-4 h-4 mr-1.5" />
+              Add Wattage Spec
+            </Button>
+          )}
+
           <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex items-center flex-wrap">
             <button
               onClick={() => setActiveTab('materials')}
@@ -689,6 +788,17 @@ export const MastersPage: React.FC = () => {
               }`}
             >
               Products ({products.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('wattages')}
+              className={`text-xs px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1 ${
+                activeTab === 'wattages'
+                  ? 'bg-[#183638] text-[#84cc16] shadow-sm font-semibold'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Wattages ({dynamicWattageList.length})
             </button>
             <button
               onClick={() => {
@@ -777,12 +887,9 @@ export const MastersPage: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All">All Wattages</SelectItem>
-                    <SelectItem value="5W">5W</SelectItem>
-                    <SelectItem value="9W">9W</SelectItem>
-                    <SelectItem value="12W">12W</SelectItem>
-                    <SelectItem value="15W">15W</SelectItem>
-                    <SelectItem value="20W">20W</SelectItem>
-                    <SelectItem value="50W">50W</SelectItem>
+                    {dynamicWattageList.map((w) => (
+                      <SelectItem key={w.name} value={w.name}>{w.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {(matSearch || matCatFilter !== 'All' || matWattageFilter !== 'All') && (
@@ -930,12 +1037,9 @@ export const MastersPage: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All">All Wattages</SelectItem>
-                    <SelectItem value="5W">5W</SelectItem>
-                    <SelectItem value="9W">9W</SelectItem>
-                    <SelectItem value="12W">12W</SelectItem>
-                    <SelectItem value="15W">15W</SelectItem>
-                    <SelectItem value="20W">20W</SelectItem>
-                    <SelectItem value="50W">50W</SelectItem>
+                    {dynamicWattageList.map((w) => (
+                      <SelectItem key={w.name} value={w.name}>{w.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -1020,6 +1124,268 @@ export const MastersPage: React.FC = () => {
         </Card>
       )}
 
+      {/* Tab 6: Wattage Specifications Master */}
+      {activeTab === 'wattages' && (
+        <Card className="border border-slate-200 dark:border-slate-800">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#84cc16]" />
+                  Wattage Ratings & Master Specifications
+                </CardTitle>
+                <CardDescription>
+                  Enterprise power ratings for LED lamps, luminaires, drivers, and circuit assemblies. Standardized ratings are consumed globally by Products, BOMs, and Inventory filters.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Search wattages..."
+                  value={wattageSearch}
+                  onChange={(e) => setWattageSearch(e.target.value)}
+                  className="w-48 h-8 text-xs"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => setShowAddWattageModal(true)}
+                  className="text-xs bg-[#183638] hover:bg-[#122b2d] text-[#84cc16] border border-[#84cc16]/40 font-semibold"
+                >
+                  + Add Wattage Spec
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {dynamicWattageList
+                .filter((w) => !wattageSearch || w.name.toLowerCase().includes(wattageSearch.toLowerCase()) || (w.description && w.description.toLowerCase().includes(wattageSearch.toLowerCase())))
+                .map((w) => {
+                  const associatedProducts = products.filter((p) => p.wattage === w.name);
+                  return (
+                    <div
+                      key={w.id || w.name}
+                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-2 text-xs relative group"
+                    >
+                      <div className="flex items-center justify-between border-b pb-2">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-[#183638] text-[#84cc16] font-bold text-xs border border-[#84cc16]/30">
+                            {w.name}
+                          </Badge>
+                          <span className="font-semibold text-slate-500 text-[11px]">
+                            {w.numericWatts}W Nominal
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className={w.status === 'Active' ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20' : 'text-slate-400'}>
+                            {w.status || 'Active'}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEditWattage(w)}
+                            className="h-6 w-6 p-0 text-slate-400 hover:text-blue-600"
+                            title="Edit Wattage"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete wattage rating ${w.name}?`)) {
+                                deleteWattage(w.id);
+                              }
+                            }}
+                            className="h-6 w-6 p-0 text-slate-400 hover:text-red-600"
+                            title="Delete Wattage"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-slate-600 dark:text-slate-300 min-h-[32px]">
+                        {w.description || 'General lighting and driver specification'}
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t text-[11px] text-slate-400">
+                        <span>Associated Models</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
+                          {associatedProducts.length} Products
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Add Wattage Modal */}
+      {showAddWattageModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#84cc16]" />
+                Register Master Wattage Rating
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAddWattageModal(false)}
+                className="h-7 w-7 p-0 rounded-full text-slate-400 hover:text-slate-700"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <form onSubmit={handleSaveAddWattage} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold mb-1">Wattage Label / Code (e.g. 18W, 24W)</label>
+                <Input
+                  required
+                  placeholder="e.g. 24W"
+                  value={newWattageName}
+                  onChange={(e) => {
+                    setNewWattageName(e.target.value);
+                    const parsed = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
+                    if (!isNaN(parsed)) setNewWattageNumeric(parsed);
+                  }}
+                  className="h-9 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Numeric Rating (Watts)</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={newWattageNumeric}
+                    onChange={(e) => setNewWattageNumeric(Number(e.target.value))}
+                    className="h-9 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Status</label>
+                  <Select value={newWattageStatus} onValueChange={(val: any) => setNewWattageStatus(val)}>
+                    <SelectTrigger className="h-9 font-semibold text-xs bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Description / Application Notes</label>
+                <Input
+                  placeholder="e.g. Architectural Panels, Heavy Troffers"
+                  value={newWattageDesc}
+                  onChange={(e) => setNewWattageDesc(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowAddWattageModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold">
+                  Save Wattage Spec
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Wattage Modal */}
+      {showEditWattageModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#84cc16]" />
+                Edit Master Wattage Rating
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEditWattageModal(false)}
+                className="h-7 w-7 p-0 rounded-full text-slate-400 hover:text-slate-700"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <form onSubmit={handleSaveEditWattage} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold mb-1">Wattage Label / Code</label>
+                <Input
+                  required
+                  value={editWattageName}
+                  onChange={(e) => {
+                    setEditWattageName(e.target.value);
+                    const parsed = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
+                    if (!isNaN(parsed)) setEditWattageNumeric(parsed);
+                  }}
+                  className="h-9 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Numeric Rating (Watts)</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={editWattageNumeric}
+                    onChange={(e) => setEditWattageNumeric(Number(e.target.value))}
+                    className="h-9 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Status</label>
+                  <Select value={editWattageStatus} onValueChange={(val: any) => setEditWattageStatus(val)}>
+                    <SelectTrigger className="h-9 font-semibold text-xs bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Description / Application Notes</label>
+                <Input
+                  value={editWattageDesc}
+                  onChange={(e) => setEditWattageDesc(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowEditWattageModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold">
+                  Update Wattage Spec
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Tab 3: Interactive Bill of Materials (BOM) Builder & Editor */}
       {activeTab === 'bom' && (
         products.length === 0 || !selectedProduct ? (
@@ -1102,17 +1468,22 @@ export const MastersPage: React.FC = () => {
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">
                     Select Material Component
                   </label>
-                  <select
+                  <Select
                     value={addBomMatId}
-                    onChange={(e) => setAddBomMatId(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    onValueChange={(val) => setAddBomMatId(val)}
+                    disabled={materials.length === 0}
                   >
-                    {materials.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.code} - {m.name} (₹{m.standardCost}/{m.uom})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-8 bg-white dark:bg-slate-800 text-xs">
+                      <SelectValue placeholder={materials.length === 0 ? "No materials available" : "-- Select Material --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {materials.map((m) => (
+                        <SelectItem key={m.id} value={m.id} className="text-xs">
+                          {m.code} - {m.name} (₹{m.standardCost}/{m.uom})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="w-28">
@@ -1439,15 +1810,6 @@ export const MastersPage: React.FC = () => {
                 </div>
               ))}
             </div>
-            <TablePagination
-              currentPage={prodPage}
-              totalPages={totalProdPages}
-              totalItems={totalProdItems}
-              pageSize={prodPageSize}
-              pageSizeOptions={[6, 9, 15, 30]}
-              onPageChange={setProdPage}
-              onPageSizeChange={setProdPageSize}
-            />
           </CardContent>
         </Card>
       )}
@@ -1543,13 +1905,22 @@ export const MastersPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1">Wattage</label>
-                  <Input
-                    placeholder="e.g. 15W"
-                    value={newProdWattage}
-                    onChange={(e) => setNewProdWattage(e.target.value)}
-                    className="h-9 font-bold"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold">Wattage Spec</label>
+                    <span className="text-[10px] text-slate-400 font-normal">From Wattage Master</span>
+                  </div>
+                  <Select value={newProdWattage} onValueChange={setNewProdWattage}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Select Wattage Rating" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dynamicWattageList.map((w) => (
+                        <SelectItem key={w.name} value={w.name} className="text-xs">
+                          {w.name} {w.description ? `• ${w.description}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Estimated Unit Cost (₹)</label>
@@ -1924,25 +2295,22 @@ export const MastersPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1">Store In-Charge / Warehouse Manager *</label>
-                <select
+                <Select
                   value={newWhManager}
-                  onChange={(e) => setNewWhManager(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                  required
+                  onValueChange={(val) => setNewWhManager(val)}
+                  disabled={!employees || employees.length === 0}
                 >
-                  {(!employees || employees.length === 0) ? (
-                    <option value="">No staff members available. Please onboard staff first.</option>
-                  ) : (
-                    <>
-                      <option value="">-- Select Warehouse Manager --</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder={(!employees || employees.length === 0) ? "No staff members available" : "-- Select Warehouse Manager --"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(employees || []).map((emp) => (
+                      <SelectItem key={emp.id} value={`${emp.name} (${emp.role})`} className="text-xs">
+                        {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {(!employees || employees.length === 0) && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                     ⚠️ No staff members available. Please onboard workforce in Employees page first.
@@ -2250,18 +2618,20 @@ export const MastersPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1">Wattage Spec</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold">Wattage Spec</label>
+                    <span className="text-[10px] text-slate-400 font-normal">From Wattage Master</span>
+                  </div>
                   <Select value={editProdWattage} onValueChange={setEditProdWattage}>
                     <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
                       <SelectValue placeholder="Wattage" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="7W">7W High Efficiency</SelectItem>
-                      <SelectItem value="9W">9W Standard</SelectItem>
-                      <SelectItem value="12W">12W High-Lumen</SelectItem>
-                      <SelectItem value="15W">15W Commercial</SelectItem>
-                      <SelectItem value="20W">20W Industrial Batten</SelectItem>
-                      <SelectItem value="50W">50W Outdoor Flood</SelectItem>
+                      {dynamicWattageList.map((w) => (
+                        <SelectItem key={w.name} value={w.name} className="text-xs">
+                          {w.name} {w.description ? `• ${w.description}` : ''}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -2472,25 +2842,22 @@ export const MastersPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1">Store In-Charge / Warehouse Manager *</label>
-                <select
+                <Select
                   value={editWhManager}
-                  onChange={(e) => setEditWhManager(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                  required
+                  onValueChange={(val) => setEditWhManager(val)}
+                  disabled={!employees || employees.length === 0}
                 >
-                  {(!employees || employees.length === 0) ? (
-                    <option value="">No staff members available. Please onboard staff first.</option>
-                  ) : (
-                    <>
-                      <option value="">-- Select Warehouse Manager --</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder={(!employees || employees.length === 0) ? "No staff members available" : "-- Select Warehouse Manager --"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(employees || []).map((emp) => (
+                      <SelectItem key={emp.id} value={`${emp.name} (${emp.role})`} className="text-xs">
+                        {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {(!employees || employees.length === 0) && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                     ⚠️ No staff members available. Please onboard workforce in Employees page first.

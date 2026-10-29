@@ -168,4 +168,11 @@ router.post("/categories", catchAsync(async (req: Request, res: Response) => res
 router.put("/categories/:id", catchAsync(async (req: Request, res: Response) => res.json(await categoryCtrl.updateCategory(req.params.id, req.body))));
 router.delete("/categories/:id", catchAsync(async (req: Request, res: Response) => res.json(await categoryCtrl.deleteCategory(req.params.id))));
 
+// Wattages (Dynamic Master Table)
+import { wattageCtrl } from "../controllers/wattage.controller";
+router.get("/wattages", catchAsync(async (req: Request, res: Response) => res.json(await wattageCtrl.getWattages(req.query.status as string))));
+router.post("/wattages", catchAsync(async (req: Request, res: Response) => res.status(201).json(await wattageCtrl.createWattage(req.body))));
+router.put("/wattages/:id", catchAsync(async (req: Request, res: Response) => res.json(await wattageCtrl.updateWattage(req.params.id, req.body))));
+router.delete("/wattages/:id", catchAsync(async (req: Request, res: Response) => res.json(await wattageCtrl.deleteWattage(req.params.id))));
+
 export default router;

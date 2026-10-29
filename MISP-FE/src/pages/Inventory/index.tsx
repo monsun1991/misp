@@ -28,7 +28,7 @@ import {
   Cpu,
   Edit2
 } from 'lucide-react';
-import { useMipsStore, Material, Product, StockLedgerEntry, isPlantMatch } from '@/store/useMipsStore';
+import { useMipsStore, Material, Product, StockLedgerEntry, isPlantMatch, getDynamicWattages } from '@/store/useMipsStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +51,7 @@ export const InventoryPage: React.FC = () => {
     stockLedger: rawStockLedger,
     products,
     categories,
+    wattages,
     addCategory,
     employees,
     adjustStock,
@@ -78,6 +79,7 @@ export const InventoryPage: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [warehouseFilter, setWarehouseFilter] = useState<string>('All');
   const [wattageFilter, setWattageFilter] = useState<string>('All');
+  const dynamicWattages = React.useMemo(() => getDynamicWattages(wattages, products), [wattages, products]);
 
   // Ledger Search & Filter
   const [ledgerSearch, setLedgerSearch] = useState('');
@@ -183,20 +185,29 @@ export const InventoryPage: React.FC = () => {
 
   // Extract unique warehouses dynamically for the active plant
   const dynamicWarehouses = Array.from(new Set(materials.map((m) => m.warehouse))).filter(Boolean);
-  // Extract all distinct categories from database categories table & materials
-  const dynamicCategories = Array.from(
-    new Set([
-      ...(categories || []).filter((c) => c.type === 'material').map((c) => c.name),
-      'Electronics',
-      'Mechanical',
-      'Optical',
-      'Hardware',
-      'Packaging',
-      'Raw Materials',
-      'Chemicals & Consumables',
-      ...materials.map((m) => m.category)
-    ])
-  ).filter(Boolean);
+
+  // Dynamic Material & Product Categories synchronized with database categories table
+  const dynamicMaterialCategories = React.useMemo(() => {
+    const defaultCats = ['Electronics', 'Mechanical', 'Optical', 'Hardware', 'Packaging', 'Raw Materials', 'Chemicals & Consumables'];
+    const fromDb = (categories || []).filter((c) => c.type === 'material').map((c) => c.name);
+    const fromMats = materials.map((m) => m.category).filter(Boolean);
+    return Array.from(new Set([...fromDb, ...defaultCats, ...fromMats]));
+  }, [categories, materials]);
+
+  const dynamicProductCategories = React.useMemo(() => {
+    const defaultCats = ['LED Bulbs', 'Downlights', 'Battens', 'Floodlights', 'Architectural & Gate', 'Street Lights', 'Strip Lights'];
+    const fromDb = (categories || []).filter((c) => c.type === 'product').map((c) => c.name);
+    const fromProds = products.map((p) => p.category).filter(Boolean);
+    return Array.from(new Set([...fromDb, ...defaultCats, ...fromProds]));
+  }, [categories, products]);
+
+  const activeCategories = viewMode === 'bom' ? dynamicProductCategories : dynamicMaterialCategories;
+
+  // Reset category filter if it doesn't exist in current view mode
+  React.useEffect(() => {
+    setCategoryFilter('All');
+  }, [viewMode]);
+
   // Extract all distinct suppliers from rawMaterials
   const allSuppliers = Array.from(new Set(rawMaterials.map((m) => m.supplier).filter(Boolean)));
 
@@ -228,26 +239,7 @@ export const InventoryPage: React.FC = () => {
 
   const matchesCategoryHelper = (cat: string, subCat?: string) => {
     if (categoryFilter === 'All') return true;
-    if (cat === categoryFilter || subCat === categoryFilter) return true;
-    if (categoryFilter === 'Electronic Drivers') {
-      return cat === 'Electronics' || subCat?.includes('Power') || subCat?.includes('Driver');
-    }
-    if (categoryFilter === 'LED Diodes & COB') {
-      return cat === 'Electronics' || subCat?.includes('LED') || subCat?.includes('COB');
-    }
-    if (categoryFilter === 'Housings & Die-Cast') {
-      return cat === 'Mechanical' || subCat?.includes('Heatsink') || subCat?.includes('Castings');
-    }
-    if (categoryFilter === 'Diffusers & Optics') {
-      return cat === 'Optical' || subCat?.includes('Diffuser');
-    }
-    if (categoryFilter === 'Wiring & Hardware') {
-      return cat === 'Hardware' || subCat?.includes('Wiring') || subCat?.includes('Fasteners');
-    }
-    if (categoryFilter === 'Packaging & Retail Boxes') {
-      return cat === 'Packaging' || subCat?.includes('Retail');
-    }
-    return false;
+    return cat === categoryFilter || subCat === categoryFilter;
   };
 
   const filteredMaterials = React.useMemo(() => {
@@ -621,22 +613,18 @@ export const InventoryPage: React.FC = () => {
                 </div>
 
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-[150px] h-8 text-xs">
+                  <SelectTrigger className="w-[160px] h-8 text-xs font-semibold">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="All">All Categories</SelectItem>
-                    {dynamicCategories.map((cat) => (
+                    <SelectItem value="All">
+                      {viewMode === 'bom' ? 'All Product Categories' : 'All Material Categories'}
+                    </SelectItem>
+                    {activeCategories.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>
                     ))}
-                    <SelectItem value="Electronic Drivers">Electronic Drivers</SelectItem>
-                    <SelectItem value="LED Diodes & COB">LED Diodes & COB</SelectItem>
-                    <SelectItem value="Housings & Die-Cast">Housings & Die-Cast</SelectItem>
-                    <SelectItem value="Diffusers & Optics">Diffusers & Optics</SelectItem>
-                    <SelectItem value="Wiring & Hardware">Wiring & Hardware</SelectItem>
-                    <SelectItem value="Packaging & Retail Boxes">Packaging & Retail Boxes</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -660,12 +648,9 @@ export const InventoryPage: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All">All Wattages</SelectItem>
-                    <SelectItem value="5W">5W</SelectItem>
-                    <SelectItem value="9W">9W</SelectItem>
-                    <SelectItem value="12W">12W</SelectItem>
-                    <SelectItem value="15W">15W</SelectItem>
-                    <SelectItem value="20W">20W</SelectItem>
-                    <SelectItem value="50W">50W</SelectItem>
+                    {dynamicWattages.map((w) => (
+                      <SelectItem key={w} value={w}>{w}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1195,24 +1180,22 @@ export const InventoryPage: React.FC = () => {
                   <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                     2. Select Material *
                   </label>
-                  <select
+                  <Select
                     value={selectedMatId}
-                    onChange={(e) => setSelectedMatId(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 font-medium"
+                    onValueChange={(val) => setSelectedMatId(val)}
+                    disabled={materials.length === 0}
                   >
-                    {materials.length === 0 ? (
-                      <option value="">No raw materials found. Please add materials in Master Data first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Material --</option>
-                        {materials.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.code} - {m.name} ({m.currentStock} {m.uom})
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={materials.length === 0 ? "No raw materials found" : "-- Select Material --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {materials.map((m) => (
+                        <SelectItem key={m.id} value={m.id} className="text-xs">
+                          {m.code} - {m.name} ({m.currentStock} {m.uom})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {materials.length === 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                       ⚠️ No raw materials available. Please add materials in Master Data &gt; Materials first.
@@ -1224,24 +1207,22 @@ export const InventoryPage: React.FC = () => {
                   <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                     3. {movementDirection === 'IN' ? 'Destination Warehouse' : 'Source Warehouse'} *
                   </label>
-                  <select
+                  <Select
                     value={targetWarehouse}
-                    onChange={(e) => setTargetWarehouse(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 font-medium"
+                    onValueChange={(val) => setTargetWarehouse(val)}
+                    disabled={dynamicWarehouses.length === 0}
                   >
-                    {dynamicWarehouses.length === 0 ? (
-                      <option value="">No warehouses found. Please add a warehouse in Master Data first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Warehouse --</option>
-                        {dynamicWarehouses.map((wh) => (
-                          <option key={wh} value={wh}>
-                            {wh}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={dynamicWarehouses.length === 0 ? "No warehouses found" : "-- Select Warehouse --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dynamicWarehouses.map((wh) => (
+                        <SelectItem key={wh} value={wh} className="text-xs">
+                          {wh}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {dynamicWarehouses.length === 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                       ⚠️ No warehouses available. Please add a warehouse in Master Data &gt; Vendors &amp; Warehouses first.
@@ -1256,27 +1237,35 @@ export const InventoryPage: React.FC = () => {
                   4. Transaction Subtype *
                 </label>
                 {movementDirection === 'IN' ? (
-                  <select
+                  <Select
                     value={inboundCategory}
-                    onChange={(e) => setInboundCategory(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 font-medium text-emerald-800 dark:text-emerald-300"
+                    onValueChange={(val: any) => setInboundCategory(val)}
                   >
-                    <option value="Supplier Inbound (Direct)">Direct Supplier Inbound Delivery (Non-PO / Spot Delivery)</option>
-                    <option value="Physical Count Surplus">Physical Cycle Count Surplus (Audit Finding)</option>
-                    <option value="Production Floor Return">Production Floor Return (Outside Standard Kit)</option>
-                    <option value="Opening Balance Upload">Opening Balance Upload / Initial Stock Count</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800 text-emerald-800 dark:text-emerald-300">
+                      <SelectValue placeholder="Transaction Subtype" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Supplier Inbound (Direct)" className="text-xs">Direct Supplier Inbound Delivery (Non-PO / Spot Delivery)</SelectItem>
+                      <SelectItem value="Physical Count Surplus" className="text-xs">Physical Cycle Count Surplus (Audit Finding)</SelectItem>
+                      <SelectItem value="Production Floor Return" className="text-xs">Production Floor Return (Outside Standard Kit)</SelectItem>
+                      <SelectItem value="Opening Balance Upload" className="text-xs">Opening Balance Upload / Initial Stock Count</SelectItem>
+                    </SelectContent>
+                  </Select>
                 ) : (
-                  <select
+                  <Select
                     value={outboundCategory}
-                    onChange={(e) => setOutboundCategory(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 font-medium text-rose-800 dark:text-rose-300"
+                    onValueChange={(val: any) => setOutboundCategory(val)}
                   >
-                    <option value="Return to Vendor (RTV)">Return to Vendor (RTV) - Defective Component Lots</option>
-                    <option value="Scrap / Damage Disposal">Scrap & Damage Disposal (QA Test Breakdown)</option>
-                    <option value="Sample / Engineering Issue">Engineering & Photometric Sample Issuance</option>
-                    <option value="Physical Count Deficit">Physical Count Deficit (Shrinkage Write-off)</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800 text-rose-800 dark:text-rose-300">
+                      <SelectValue placeholder="Transaction Subtype" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Return to Vendor (RTV)" className="text-xs">Return to Vendor (RTV) - Defective Component Lots</SelectItem>
+                      <SelectItem value="Scrap / Damage Disposal" className="text-xs">Scrap &amp; Damage Disposal (QA Test Breakdown)</SelectItem>
+                      <SelectItem value="Sample / Engineering Issue" className="text-xs">Engineering &amp; Photometric Sample Issuance</SelectItem>
+                      <SelectItem value="Physical Count Deficit" className="text-xs">Physical Count Deficit (Shrinkage Write-off)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 
@@ -1293,17 +1282,22 @@ export const InventoryPage: React.FC = () => {
                       <label className="block font-semibold mb-1 text-slate-600 dark:text-slate-400">
                         Supplier / Vendor Name *
                       </label>
-                      <select
+                      <Select
                         value={supplierName}
-                        onChange={(e) => setSupplierName(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-900 border rounded-lg p-2"
+                        onValueChange={(val) => setSupplierName(val)}
+                        disabled={allSuppliers.length === 0}
                       >
-                        {allSuppliers.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full h-8 bg-white dark:bg-slate-900 text-xs">
+                          <SelectValue placeholder={allSuppliers.length === 0 ? "No vendors available" : "-- Select Vendor --"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allSuppliers.map((s) => (
+                            <SelectItem key={s} value={s} className="text-xs">
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     {movementDirection === 'IN' ? (
@@ -1374,27 +1368,31 @@ export const InventoryPage: React.FC = () => {
                       <label className="block font-semibold mb-1 text-slate-600 dark:text-slate-400">
                         RTV Defect & Rejection Justification *
                       </label>
-                      <select
+                      <Select
                         value={rtvDefectReason}
-                        onChange={(e) => setRtvDefectReason(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-900 border rounded-lg p-2"
+                        onValueChange={(val) => setRtvDefectReason(val)}
                       >
-                        <option value="Electrical parameter / CCT chromaticity drift beyond spec">
-                          Electrical parameter / CCT chromaticity drift beyond spec
-                        </option>
-                        <option value="Low Power Factor (PF < 0.90) on Driver Analyzer">
-                          Low Power Factor (PF &lt; 0.90) on Driver Analyzer
-                        </option>
-                        <option value="Cold solder joints & PCB track oxidation">
-                          Cold solder joints & PCB track oxidation
-                        </option>
-                        <option value="Die-cast dimensional distortion / threading defect">
-                          Die-cast dimensional distortion / threading defect
-                        </option>
-                        <option value="Optical diffuser micro-cracks & yellowing">
-                          Optical diffuser micro-cracks & yellowing
-                        </option>
-                      </select>
+                        <SelectTrigger className="w-full h-8 bg-white dark:bg-slate-900 text-xs">
+                          <SelectValue placeholder="Select Defect Cause" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Electrical parameter / CCT chromaticity drift beyond spec" className="text-xs">
+                            Electrical parameter / CCT chromaticity drift beyond spec
+                          </SelectItem>
+                          <SelectItem value="Low Power Factor (PF < 0.90) on Driver Analyzer" className="text-xs">
+                            Low Power Factor (PF &lt; 0.90) on Driver Analyzer
+                          </SelectItem>
+                          <SelectItem value="Cold solder joints & PCB track oxidation" className="text-xs">
+                            Cold solder joints &amp; PCB track oxidation
+                          </SelectItem>
+                          <SelectItem value="Die-cast dimensional distortion / threading defect" className="text-xs">
+                            Die-cast dimensional distortion / threading defect
+                          </SelectItem>
+                          <SelectItem value="Optical diffuser micro-cracks & yellowing" className="text-xs">
+                            Optical diffuser micro-cracks &amp; yellowing
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
                 </div>
@@ -1406,24 +1404,28 @@ export const InventoryPage: React.FC = () => {
                   <label className="block font-semibold text-red-800 dark:text-red-300">
                     QA Scrap Failure Cause *
                   </label>
-                  <select
+                  <Select
                     value={scrapReason}
-                    onChange={(e) => setScrapReason(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border rounded-lg p-2 text-xs"
+                    onValueChange={(val) => setScrapReason(val)}
                   >
-                    <option value="Damaged / Hi-Pot breakdown during QA verification">
-                      Damaged / Hi-Pot breakdown during QA verification
-                    </option>
-                    <option value="High voltage surge protection failure (MOV blowout)">
-                      High voltage surge protection failure (MOV blowout)
-                    </option>
-                    <option value="Transit cracking / shop floor drops">
-                      Transit cracking / shop floor drops
-                    </option>
-                    <option value="Assembly line thermal potting overflow damage">
-                      Assembly line thermal potting overflow damage
-                    </option>
-                  </select>
+                    <SelectTrigger className="w-full h-8 bg-white dark:bg-slate-900 text-xs">
+                      <SelectValue placeholder="Select Scrap Cause" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Damaged / Hi-Pot breakdown during QA verification" className="text-xs">
+                        Damaged / Hi-Pot breakdown during QA verification
+                      </SelectItem>
+                      <SelectItem value="High voltage surge protection failure (MOV blowout)" className="text-xs">
+                        High voltage surge protection failure (MOV blowout)
+                      </SelectItem>
+                      <SelectItem value="Transit cracking / shop floor drops" className="text-xs">
+                        Transit cracking / shop floor drops
+                      </SelectItem>
+                      <SelectItem value="Assembly line thermal potting overflow damage" className="text-xs">
+                        Assembly line thermal potting overflow damage
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
@@ -1454,25 +1456,22 @@ export const InventoryPage: React.FC = () => {
                   <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                     6. Authorized Officer *
                   </label>
-                  <select
+                  <Select
                     value={authorizingPerson}
-                    onChange={(e) => setAuthorizingPerson(e.target.value)}
-                    className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                    required
+                    onValueChange={(val) => setAuthorizingPerson(val)}
+                    disabled={authorizedEmployees.length === 0}
                   >
-                    {authorizedEmployees.length === 0 ? (
-                      <option value="">No authorized officers available. Please onboard managers first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Authorized Officer --</option>
-                        {authorizedEmployees.map((emp) => (
-                          <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                            {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 bg-slate-50 dark:bg-slate-800 text-xs font-semibold">
+                      <SelectValue placeholder={authorizedEmployees.length === 0 ? "No authorized officers available" : "-- Select Authorized Officer --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {authorizedEmployees.map((emp) => (
+                        <SelectItem key={emp.id} value={`${emp.name} (${emp.role})`} className="text-xs">
+                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {authorizedEmployees.length === 0 && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                       ⚠️ No authorized officers available. Please onboard supervisors/managers in Employees page first.
@@ -1608,7 +1607,7 @@ export const InventoryPage: React.FC = () => {
                           <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
                         <SelectContent>
-                          {dynamicCategories.map((cat) => (
+                          {dynamicMaterialCategories.map((cat) => (
                             <SelectItem key={cat} value={cat} className="text-xs font-medium">
                               {cat}
                             </SelectItem>
@@ -1724,14 +1723,18 @@ export const InventoryPage: React.FC = () => {
 
                 <div>
                   <label className="block font-semibold mb-1">Material Status</label>
-                  <select
+                  <Select
                     value={editMatStatus}
-                    onChange={(e) => setEditMatStatus(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-medium"
+                    onValueChange={(val: any) => setEditMatStatus(val)}
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Material Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active" className="text-xs">Active</SelectItem>
+                      <SelectItem value="Inactive" className="text-xs">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

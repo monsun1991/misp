@@ -41,7 +41,8 @@ import {
   CustomerPOItem,
   OutwardDispatchRecord,
   Customer,
-  isPlantMatch
+  isPlantMatch,
+  getDynamicWattages
 } from '@/store/useMipsStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,7 @@ export const OrdersDispatchPage: React.FC = () => {
     products,
     employees,
     selectedPlant,
+    wattages,
     createCustomerPO,
     updateCustomerPO,
     dispatchCustomerPO,
@@ -97,6 +99,8 @@ export const OrdersDispatchPage: React.FC = () => {
   const [wattageFilter, setWattageFilter] = useState<string>('All');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+
+  const dynamicWattages = React.useMemo(() => getDynamicWattages(wattages, products), [wattages, products]);
 
   // Dispatches search and date filter
   const [dispatchSearch, setDispatchSearch] = useState<string>('');
@@ -630,21 +634,24 @@ export const OrdersDispatchPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <select
+                    <Select
                       value={selectedCustomerOption}
-                      onChange={(e) => handleCustomerDropdownChange(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-[#84cc16]"
+                      onValueChange={(val) => handleCustomerDropdownChange(val)}
                     >
-                      <option value="">-- Select Registered Buyer --</option>
-                      {customers.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({c.city})
-                        </option>
-                      ))}
-                      <option value="OTHERS" className="font-bold text-[#146b68] dark:text-[#84cc16]">
-                        + Others (Enter New Buyer / Distributor)
-                      </option>
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="-- Select Registered Buyer --" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map((c) => (
+                          <SelectItem key={c.id} value={c.id} className="text-xs">
+                            {c.name} ({c.city})
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="OTHERS" className="text-xs font-bold text-[#146b68] dark:text-[#84cc16]">
+                          + Others (Enter New Buyer / Distributor)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
 
                     {isCustomCustomer && (
                       <div className="mt-2 space-y-1">
@@ -916,21 +923,22 @@ export const OrdersDispatchPage: React.FC = () => {
                             {idx + 1}
                           </td>
                           <td className="py-2 px-3">
-                            <select
+                            <Select
                               value={item.productId}
-                              onChange={(e) => handleProductChange(idx, e.target.value)}
-                              className="w-full bg-slate-50 dark:bg-slate-800 border rounded-md p-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-[#84cc16]"
+                              onValueChange={(val) => handleProductChange(idx, val)}
+                              disabled={products.length === 0}
                             >
-                              {products.length === 0 ? (
-                                <option value="">No products found. Please add products in Master Data first.</option>
-                              ) : (
-                                products.map((p) => (
-                                  <option key={p.id} value={p.id}>
+                              <SelectTrigger className="w-full h-8 text-xs font-medium bg-slate-50 dark:bg-slate-800">
+                                <SelectValue placeholder={products.length === 0 ? "No products found" : "-- Select Product --"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {products.map((p) => (
+                                  <SelectItem key={p.id} value={p.id} className="text-xs">
                                     {p.name} {fgsStockByProductId[p.id] ? `(FGS: ${fgsStockByProductId[p.id].toLocaleString()} avail)` : '(FGS: 0)'}
-                                  </option>
-                                ))
-                              )}
-                            </select>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </td>
                           <td className="py-2 px-3">
                             <span className="font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
@@ -938,19 +946,23 @@ export const OrdersDispatchPage: React.FC = () => {
                             </span>
                           </td>
                           <td className="py-2 px-3">
-                            <select
+                            <Select
                               value={item.uom}
-                              onChange={(e) => {
+                              onValueChange={(val) => {
                                 const updated = [...poLineItems];
-                                updated[idx].uom = e.target.value;
+                                updated[idx].uom = val;
                                 setPoLineItems(updated);
                               }}
-                              className="bg-transparent border rounded p-1 text-xs font-medium"
                             >
-                              <option value="Pcs">Pcs</option>
-                              <option value="Sets">Sets</option>
-                              <option value="Boxes">Boxes</option>
-                            </select>
+                              <SelectTrigger className="w-20 h-8 text-xs font-medium bg-transparent">
+                                <SelectValue placeholder="UOM" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Pcs" className="text-xs">Pcs</SelectItem>
+                                <SelectItem value="Sets" className="text-xs">Sets</SelectItem>
+                                <SelectItem value="Boxes" className="text-xs">Boxes</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </td>
                           <td className="py-2 px-3 text-right">
                             <Input
@@ -1266,12 +1278,9 @@ export const OrdersDispatchPage: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All">All Wattages</SelectItem>
-                    <SelectItem value="5W">5W</SelectItem>
-                    <SelectItem value="9W">9W</SelectItem>
-                    <SelectItem value="12W">12W</SelectItem>
-                    <SelectItem value="15W">15W</SelectItem>
-                    <SelectItem value="20W">20W</SelectItem>
-                    <SelectItem value="50W">50W</SelectItem>
+                    {dynamicWattages.map((w) => (
+                      <SelectItem key={w} value={w}>{w}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -1799,20 +1808,23 @@ export const OrdersDispatchPage: React.FC = () => {
                     <label className="block font-semibold mb-1 text-slate-600 dark:text-slate-400">
                       Transporter / Freight Carrier *
                     </label>
-                    <select
+                    <Select
                       value={dispatchTransporter}
-                      onChange={(e) => setDispatchTransporter(e.target.value)}
-                      className="w-full h-8 bg-white dark:bg-slate-900 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                      required
+                      onValueChange={(val) => setDispatchTransporter(val)}
                     >
-                      <option value="V-Trans Logistics India">V-Trans Logistics India</option>
-                      <option value="TCI Express Ltd.">TCI Express Ltd.</option>
-                      <option value="Safexpress Logistics Pvt. Ltd.">Safexpress Logistics Pvt. Ltd.</option>
-                      <option value="GATI KWE Surface Express">GATI KWE Surface Express</option>
-                      <option value="Blue Dart Express Ltd.">Blue Dart Express Ltd.</option>
-                      <option value="Delhivery Freight">Delhivery Freight</option>
-                      <option value="Self-Pickup / Customer Dedicated Vehicle">Self-Pickup / Customer Dedicated Vehicle</option>
-                    </select>
+                      <SelectTrigger className="w-full h-8 bg-white dark:bg-slate-900 text-xs font-semibold">
+                        <SelectValue placeholder="-- Select Transporter --" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="V-Trans Logistics India" className="text-xs">V-Trans Logistics India</SelectItem>
+                        <SelectItem value="TCI Express Ltd." className="text-xs">TCI Express Ltd.</SelectItem>
+                        <SelectItem value="Safexpress Logistics Pvt. Ltd." className="text-xs">Safexpress Logistics Pvt. Ltd.</SelectItem>
+                        <SelectItem value="GATI KWE Surface Express" className="text-xs">GATI KWE Surface Express</SelectItem>
+                        <SelectItem value="Blue Dart Express Ltd." className="text-xs">Blue Dart Express Ltd.</SelectItem>
+                        <SelectItem value="Delhivery Freight" className="text-xs">Delhivery Freight</SelectItem>
+                        <SelectItem value="Self-Pickup / Customer Dedicated Vehicle" className="text-xs">Self-Pickup / Customer Dedicated Vehicle</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-slate-600 dark:text-slate-400">
@@ -1845,25 +1857,22 @@ export const OrdersDispatchPage: React.FC = () => {
                     <label className="block font-semibold mb-1 text-slate-600 dark:text-slate-400">
                       Dispatch Incharge / Prepared By *
                     </label>
-                    <select
+                    <Select
                       value={dispatchOfficer}
-                      onChange={(e) => setDispatchOfficer(e.target.value)}
-                      className="w-full h-8 bg-white dark:bg-slate-900 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                      required
+                      onValueChange={(val) => setDispatchOfficer(val)}
+                      disabled={authorizedEmployees.length === 0}
                     >
-                      {authorizedEmployees.length === 0 ? (
-                        <option value="">No dispatch officers available. Please onboard staff first.</option>
-                      ) : (
-                        <>
-                          <option value="">-- Select Dispatch Incharge --</option>
-                          {authorizedEmployees.map((emp) => (
-                            <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                              {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                            </option>
-                          ))}
-                        </>
-                      )}
-                    </select>
+                      <SelectTrigger className="w-full h-8 bg-white dark:bg-slate-900 text-xs font-semibold">
+                        <SelectValue placeholder={authorizedEmployees.length === 0 ? "No dispatch officers available" : "-- Select Dispatch Incharge --"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {authorizedEmployees.map((emp) => (
+                          <SelectItem key={emp.id} value={`${emp.name} (${emp.role})`} className="text-xs">
+                            {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {authorizedEmployees.length === 0 && (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                         ⚠️ No authorized officers available. Please onboard supervisors in Employees page first.
@@ -2028,16 +2037,20 @@ export const OrdersDispatchPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Category</label>
-                  <select
+                  <Select
                     value={newClientCategory}
-                    onChange={(e) => setNewClientCategory(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    onValueChange={(val: any) => setNewClientCategory(val)}
                   >
-                    <option value="B2B Brand OEM">B2B Brand OEM</option>
-                    <option value="Regional Distributor">Regional Distributor</option>
-                    <option value="Wholesale Trader">Wholesale Trader</option>
-                    <option value="Direct Institutional">Direct Institutional</option>
-                  </select>
+                    <SelectTrigger className="w-full h-8 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="B2B Brand OEM" className="text-xs">B2B Brand OEM</SelectItem>
+                      <SelectItem value="Regional Distributor" className="text-xs">Regional Distributor</SelectItem>
+                      <SelectItem value="Wholesale Trader" className="text-xs">Wholesale Trader</SelectItem>
+                      <SelectItem value="Direct Institutional" className="text-xs">Direct Institutional</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">GSTIN Number</label>
@@ -2105,20 +2118,23 @@ export const OrdersDispatchPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1">Payment & Commercial Terms *</label>
-                <select
+                <Select
                   value={newClientTerms}
-                  onChange={(e) => setNewClientTerms(e.target.value)}
-                  className="w-full h-8 bg-white dark:bg-slate-900 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                  required
+                  onValueChange={(val) => setNewClientTerms(val)}
                 >
-                  <option value="30 Days Net from Delivery Challan">30 Days Net from Delivery Challan</option>
-                  <option value="Immediate / 100% Advance against PI">Immediate / 100% Advance against PI</option>
-                  <option value="50% Advance, 50% against Delivery Challan">50% Advance, 50% against Delivery Challan</option>
-                  <option value="45 Days Credit from Invoice Date">45 Days Credit from Invoice Date</option>
-                  <option value="60 Days Credit from Invoice Date">60 Days Credit from Invoice Date</option>
-                  <option value="Letter of Credit (LC at Sight)">Letter of Credit (LC at Sight)</option>
-                  <option value="Cash on Delivery (COD)">Cash on Delivery (COD)</option>
-                </select>
+                  <SelectTrigger className="w-full h-8 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    <SelectValue placeholder="Payment Terms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30 Days Net from Delivery Challan" className="text-xs">30 Days Net from Delivery Challan</SelectItem>
+                    <SelectItem value="Immediate / 100% Advance against PI" className="text-xs">Immediate / 100% Advance against PI</SelectItem>
+                    <SelectItem value="50% Advance, 50% against Delivery Challan" className="text-xs">50% Advance, 50% against Delivery Challan</SelectItem>
+                    <SelectItem value="45 Days Credit from Invoice Date" className="text-xs">45 Days Credit from Invoice Date</SelectItem>
+                    <SelectItem value="60 Days Credit from Invoice Date" className="text-xs">60 Days Credit from Invoice Date</SelectItem>
+                    <SelectItem value="Letter of Credit (LC at Sight)" className="text-xs">Letter of Credit (LC at Sight)</SelectItem>
+                    <SelectItem value="Cash on Delivery (COD)" className="text-xs">Cash on Delivery (COD)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t">
@@ -2161,17 +2177,21 @@ export const OrdersDispatchPage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block font-semibold mb-1">Order Status</label>
-                    <select
+                    <Select
                       value={editOrderStatus}
-                      onChange={(e) => setEditOrderStatus(e.target.value as any)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                      onValueChange={(val: any) => setEditOrderStatus(val)}
                     >
-                      <option value="New Order">New Order</option>
-                      <option value="In Production">In Production</option>
-                      <option value="Partially Dispatched">Partially Dispatched</option>
-                      <option value="Fully Dispatched">Fully Dispatched</option>
-                      <option value="Closed">Closed</option>
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="Order Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="New Order" className="text-xs">New Order</SelectItem>
+                        <SelectItem value="In Production" className="text-xs">In Production</SelectItem>
+                        <SelectItem value="Partially Dispatched" className="text-xs">Partially Dispatched</SelectItem>
+                        <SelectItem value="Fully Dispatched" className="text-xs">Fully Dispatched</SelectItem>
+                        <SelectItem value="Closed" className="text-xs">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -2236,16 +2256,20 @@ export const OrdersDispatchPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Category</label>
-                  <select
+                  <Select
                     value={editCustCat}
-                    onChange={(e) => setEditCustCat(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                    onValueChange={(val: any) => setEditCustCat(val)}
                   >
-                    <option value="B2B Brand OEM">B2B Brand OEM</option>
-                    <option value="Regional Distributor">Regional Distributor</option>
-                    <option value="Wholesale Trader">Wholesale Trader</option>
-                    <option value="Direct Institutional">Direct Institutional</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="B2B Brand OEM" className="text-xs">B2B Brand OEM</SelectItem>
+                      <SelectItem value="Regional Distributor" className="text-xs">Regional Distributor</SelectItem>
+                      <SelectItem value="Wholesale Trader" className="text-xs">Wholesale Trader</SelectItem>
+                      <SelectItem value="Direct Institutional" className="text-xs">Direct Institutional</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -2261,19 +2285,23 @@ export const OrdersDispatchPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Payment / Commercial Terms</label>
-                  <select
+                  <Select
                     value={editCustPayment}
-                    onChange={(e) => setEditCustPayment(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                    onValueChange={(val) => setEditCustPayment(val)}
                   >
-                    <option value="30 Days Net from Delivery Challan">30 Days Net from Delivery Challan</option>
-                    <option value="Immediate / 100% Advance against PI">Immediate / 100% Advance against PI</option>
-                    <option value="50% Advance, 50% against Delivery Challan">50% Advance, 50% against Delivery Challan</option>
-                    <option value="45 Days Credit from Invoice Date">45 Days Credit from Invoice Date</option>
-                    <option value="60 Days Credit from Invoice Date">60 Days Credit from Invoice Date</option>
-                    <option value="Letter of Credit (LC at Sight)">Letter of Credit (LC at Sight)</option>
-                    <option value="Cash on Delivery (COD)">Cash on Delivery (COD)</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Payment Terms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30 Days Net from Delivery Challan" className="text-xs">30 Days Net from Delivery Challan</SelectItem>
+                      <SelectItem value="Immediate / 100% Advance against PI" className="text-xs">Immediate / 100% Advance against PI</SelectItem>
+                      <SelectItem value="50% Advance, 50% against Delivery Challan" className="text-xs">50% Advance, 50% against Delivery Challan</SelectItem>
+                      <SelectItem value="45 Days Credit from Invoice Date" className="text-xs">45 Days Credit from Invoice Date</SelectItem>
+                      <SelectItem value="60 Days Credit from Invoice Date" className="text-xs">60 Days Credit from Invoice Date</SelectItem>
+                      <SelectItem value="Letter of Credit (LC at Sight)" className="text-xs">Letter of Credit (LC at Sight)</SelectItem>
+                      <SelectItem value="Cash on Delivery (COD)" className="text-xs">Cash on Delivery (COD)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

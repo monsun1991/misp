@@ -39,5 +39,6 @@ export const API_ENDPOINTS = {
         grnEntries: `${BASE_URL}/mips/grn-entries`,
         auditLogs: `${BASE_URL}/mips/audit-logs`,
         categories: `${BASE_URL}/mips/categories`,
+        wattages: `${BASE_URL}/mips/wattages`,
     }
 };

@@ -81,3 +81,4 @@ export const deleteCategory = async (id: string): Promise<void> => {
   await getCategoryById(id);
   await repo.delete(id);
 };
+

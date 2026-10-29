@@ -12,3 +12,4 @@ export class CategoryEntity extends BaseEntityModel {
   @Column({ type: "text", nullable: true })
   description?: string;
 }
+

@@ -15,6 +15,13 @@ import {
   Calculator,
   MessageSquare
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface HeroSlide {
   src: string;
@@ -828,17 +835,21 @@ export const LandingPage: React.FC = () => {
 
                 <div>
                   <label className="block text-gray-700 dark:text-gray-300 mb-1">I am a</label>
-                  <select 
+                  <Select 
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black/40 text-gray-900 dark:text-white"
+                    onValueChange={(val) => setFormData({ ...formData, type: val })}
                   >
-                    <option>Distributor or dealer</option>
-                    <option>OEM or private label brand</option>
-                    <option>Architect or designer</option>
-                    <option>Contractor or builder</option>
-                    <option>Facility manager</option>
-                  </select>
+                    <SelectTrigger className="w-full h-11 px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black/40 text-gray-900 dark:text-white text-sm">
+                      <SelectValue placeholder="Select who you are" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Distributor or dealer" className="text-sm">Distributor or dealer</SelectItem>
+                      <SelectItem value="OEM or private label brand" className="text-sm">OEM or private label brand</SelectItem>
+                      <SelectItem value="Architect or designer" className="text-sm">Architect or designer</SelectItem>
+                      <SelectItem value="Contractor or builder" className="text-sm">Contractor or builder</SelectItem>
+                      <SelectItem value="Facility manager" className="text-sm">Facility manager</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>

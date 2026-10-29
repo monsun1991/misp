@@ -208,6 +208,14 @@ export interface MasterCategory {
   description?: string;
 }
 
+export interface MasterWattage {
+  id: string;
+  name: string;
+  numericWatts?: number;
+  description?: string;
+  status: 'Active' | 'Inactive';
+}
+
 export interface KitItem {
   materialId: string;
   materialCode: string;
@@ -314,6 +322,18 @@ export const isPlantMatch = (itemPlant?: string, activePlant?: string): boolean 
   const itemP = itemPlant.toLowerCase();
   const actP = activePlant.toLowerCase();
   return itemP.includes(actP) || actP.includes(itemP);
+};
+
+export const getDynamicWattages = (wattages?: MasterWattage[], products?: Product[]): string[] => {
+  if (wattages && wattages.length > 0) {
+    return wattages
+      .filter((w) => w.status !== 'Inactive')
+      .sort((a, b) => (Number(a.numericWatts) || 0) - (Number(b.numericWatts) || 0))
+      .map((w) => w.name);
+  }
+  const fromProds = products ? products.map((p) => p.wattage).filter(Boolean) : [];
+  const defaults = ['3W', '5W', '7W', '9W', '10W', '12W', '15W', '18W', '20W', '24W', '30W', '36W', '40W', '50W', '100W'];
+  return Array.from(new Set([...defaults, ...fromProds]));
 };
 
 export interface EmployeeAccountability {
@@ -496,10 +516,14 @@ interface MipsState {
   employees: Employee[];
   plants: PlantLocation[];
   categories: MasterCategory[];
+  wattages: MasterWattage[];
 
   // Actions
   addCategory: (cat: Omit<MasterCategory, 'id'>) => Promise<MasterCategory>;
   deleteCategory: (id: string) => Promise<void>;
+  addWattage: (w: Omit<MasterWattage, 'id'>) => Promise<MasterWattage>;
+  updateWattage: (id: string, updates: Partial<MasterWattage>) => Promise<MasterWattage>;
+  deleteWattage: (id: string) => Promise<void>;
   addMaterial: (material: Omit<Material, 'id'>) => void;
   updateMaterial: (id: string, updates: Partial<Material>) => void;
   deleteMaterial: (id: string) => void;
@@ -619,6 +643,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
       employees: [],
       plants: [],
       categories: [],
+      wattages: [],
       selectedPlant: 'All Plants (Global View)',
       setSelectedPlant: (plant) => set({ selectedPlant: plant }),
       auditLogs: [],
@@ -1848,6 +1873,53 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
         }
       },
 
+      // Master Wattages Actions
+      addWattage: async (newW) => {
+        const id = `watt-${Date.now()}`;
+        const w: MasterWattage = { ...newW, id };
+        set((state) => ({
+          wattages: [...state.wattages, w].sort((a, b) => (Number(a.numericWatts) || 0) - (Number(b.numericWatts) || 0))
+        }));
+        try {
+          const saved = await mipsService.createWattage(newW);
+          if (saved && saved.id) {
+            set((state) => ({
+              wattages: state.wattages.map((item) => (item.id === id ? { ...item, ...saved } : item))
+                .sort((a, b) => (Number(a.numericWatts) || 0) - (Number(b.numericWatts) || 0))
+            }));
+            return saved;
+          }
+        } catch (err) {
+          console.warn('Failed to sync Wattage to MySQL:', err);
+        }
+        return w;
+      },
+
+      updateWattage: async (id, updates) => {
+        set((state) => ({
+          wattages: state.wattages.map((w) => (w.id === id ? { ...w, ...updates } : w))
+            .sort((a, b) => (Number(a.numericWatts) || 0) - (Number(b.numericWatts) || 0))
+        }));
+        try {
+          const updated = await mipsService.updateWattage(id, updates);
+          return updated;
+        } catch (err) {
+          console.warn('Failed to update Wattage in MySQL:', err);
+        }
+        return {} as MasterWattage;
+      },
+
+      deleteWattage: async (id) => {
+        set((state) => ({
+          wattages: state.wattages.filter((w) => w.id !== id)
+        }));
+        try {
+          await mipsService.deleteWattage(id);
+        } catch (err) {
+          console.warn('Failed to delete Wattage from MySQL:', err);
+        }
+      },
+
       // Plant & Location Actions
       addPlant: (newPlant) => {
         const id = `plant-${Date.now()}`;
@@ -2000,11 +2072,13 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
             mipsService.getAuditLogs(),
             mipsService.getUsers(),
             mipsService.getCategories(),
+            mipsService.getWattages(),
           ]);
 
           set({
             materials: materials || [],
             categories: categories || [],
+            wattages: wattages || [],
             products: (products || []).map((p: any) => ({
               ...p,
               bom: Array.isArray(p.bom)

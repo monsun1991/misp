@@ -25,7 +25,8 @@ import {
   useMipsStore,
   FinishedGoodItem,
   FinishedGoodsLedgerEntry,
-  isPlantMatch
+  isPlantMatch,
+  getDynamicWattages
 } from '@/store/useMipsStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,10 +50,13 @@ export const FinishedGoodsPage: React.FC = () => {
     materials: rawMaterials,
     employees,
     selectedPlant,
+    wattages,
     inwardToFinishedGoods,
     adjustFinishedGoodsStock,
     updateFinishedGoodStatus
   } = useMipsStore();
+
+  const dynamicWattages = useMemo(() => getDynamicWattages(wattages, products), [wattages, products]);
 
   const finishedGoods = (rawFinishedGoods || []).filter((fg) => isPlantMatch(fg.plant, selectedPlant));
   const ledger = (rawLedger || []).filter((l) => isPlantMatch(l.plant, selectedPlant));
@@ -462,12 +466,9 @@ export const FinishedGoodsPage: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All">All Wattages</SelectItem>
-                    <SelectItem value="5W">5W</SelectItem>
-                    <SelectItem value="9W">9W</SelectItem>
-                    <SelectItem value="12W">12W</SelectItem>
-                    <SelectItem value="15W">15W</SelectItem>
-                    <SelectItem value="20W">20W</SelectItem>
-                    <SelectItem value="50W">50W</SelectItem>
+                    {dynamicWattages.map((w) => (
+                      <SelectItem key={w} value={w}>{w}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -596,22 +597,26 @@ export const FinishedGoodsPage: React.FC = () => {
                         </td>
 
                         <td className="py-3 px-3">
-                          <select
+                          <Select
                             value={item.status}
-                            onChange={(e) =>
+                            onValueChange={(val: any) =>
                               updateFinishedGoodStatus(
                                 item.id,
-                                e.target.value as FinishedGoodItem['status'],
+                                val,
                                 'Updated from FGS stock dashboard'
                               )
                             }
-                            className="text-[11px] font-semibold rounded px-1.5 py-1 border bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 cursor-pointer"
                           >
-                            <option value="Ready for Dispatch">Ready to Ship</option>
-                            <option value="Under QC">Under QC</option>
-                            <option value="Quarantine">Quarantine</option>
-                            <option value="Depleted">Depleted</option>
-                          </select>
+                            <SelectTrigger className="h-7 text-[11px] font-semibold px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border text-slate-800 dark:text-slate-200">
+                              <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Ready for Dispatch" className="text-xs">Ready to Ship</SelectItem>
+                              <SelectItem value="Under QC" className="text-xs">Under QC</SelectItem>
+                              <SelectItem value="Quarantine" className="text-xs">Quarantine</SelectItem>
+                              <SelectItem value="Depleted" className="text-xs">Depleted</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </td>
 
                         <td className="py-3 px-3 text-center">
@@ -841,24 +846,22 @@ export const FinishedGoodsPage: React.FC = () => {
                 <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                   Select Finished Product *
                 </label>
-                <select
+                <Select
                   value={inwardProductId}
-                  onChange={(e) => setInwardProductId(e.target.value)}
-                  className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-slate-900 dark:text-slate-100 text-xs"
+                  onValueChange={(val) => setInwardProductId(val)}
+                  disabled={products.length === 0}
                 >
-                  {products.length === 0 ? (
-                    <option value="">No finished products found. Please add products in Master Data first.</option>
-                  ) : (
-                    <>
-                      <option value="">-- Select Finished Product --</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({p.code}) - {p.wattage}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder={products.length === 0 ? "No finished products found" : "-- Select Finished Product --"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((p) => (
+                      <SelectItem key={p.id} value={p.id} className="text-xs">
+                        {p.name} ({p.code}) - {p.wattage}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {products.length === 0 && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                     ⚠️ No products available. Please add products in Master Data &gt; Finished Products first.
@@ -899,27 +902,31 @@ export const FinishedGoodsPage: React.FC = () => {
                   <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                     Target Warehouse *
                   </label>
-                  <select
+                  <Select
                     value={isCustomWarehouse ? '__custom__' : inwardWarehouse}
-                    onChange={(e) => {
-                      if (e.target.value === '__custom__') {
+                    onValueChange={(val) => {
+                      if (val === '__custom__') {
                         setIsCustomWarehouse(true);
                       } else {
                         setIsCustomWarehouse(false);
-                        setInwardWarehouse(e.target.value);
+                        setInwardWarehouse(val);
                       }
                     }}
-                    className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-slate-900 dark:text-slate-100"
                   >
-                    {dynamicWarehouses.map((wh) => (
-                      <option key={wh} value={wh}>
-                        {wh}
-                      </option>
-                    ))}
-                    <option value="__custom__" className="font-semibold text-[#146b68] dark:text-[#84cc16]">
-                      + Others (Enter New Warehouse / Bay)
-                    </option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="-- Select Warehouse --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dynamicWarehouses.map((wh) => (
+                        <SelectItem key={wh} value={wh} className="text-xs">
+                          {wh}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__custom__" className="text-xs font-semibold text-[#146b68] dark:text-[#84cc16]">
+                        + Others (Enter New Warehouse / Bay)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                   {isCustomWarehouse && (
                     <div className="mt-2 space-y-1">
                       <Input
@@ -941,15 +948,19 @@ export const FinishedGoodsPage: React.FC = () => {
                   <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                     QA Status
                   </label>
-                  <select
+                  <Select
                     value={inwardStatus}
-                    onChange={(e) => setInwardStatus(e.target.value as FinishedGoodItem['status'])}
-                    className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2"
+                    onValueChange={(val: any) => setInwardStatus(val)}
                   >
-                    <option value="Ready for Dispatch">Ready for Dispatch</option>
-                    <option value="Under QC">Under QC</option>
-                    <option value="Quarantine">Quarantine</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="QA Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Ready for Dispatch" className="text-xs">Ready for Dispatch</SelectItem>
+                      <SelectItem value="Under QC" className="text-xs">Under QC</SelectItem>
+                      <SelectItem value="Quarantine" className="text-xs">Quarantine</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -957,25 +968,28 @@ export const FinishedGoodsPage: React.FC = () => {
                 <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                   Inward Verifier / Store Incharge *
                 </label>
-                <select
+                <Select
                   value={inwardOfficer}
-                  onChange={(e) => setInwardOfficer(e.target.value)}
-                  className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                  required
+                  onValueChange={(val) => setInwardOfficer(val)}
                 >
-                  {authorizedEmployees.map((emp) => (
-                    <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                      {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                    </option>
-                  ))}
-                  {authorizedEmployees.length === 0 && (
-                    <>
-                      <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
-                      <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
-                      <option value="System Super Admin">System Super Admin</option>
-                    </>
-                  )}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder="-- Select Verifier --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {authorizedEmployees.map((emp) => (
+                      <SelectItem key={emp.id} value={`${emp.name} (${emp.role})`} className="text-xs">
+                        {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                      </SelectItem>
+                    ))}
+                    {authorizedEmployees.length === 0 && (
+                      <>
+                        <SelectItem value="Ramesh Sharma (Store Manager)" className="text-xs">Ramesh Sharma &bull; Store Manager</SelectItem>
+                        <SelectItem value="Anand Deshmukh (Plant Manager)" className="text-xs">Anand Deshmukh &bull; Plant Manager</SelectItem>
+                        <SelectItem value="System Super Admin" className="text-xs">System Super Admin</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -1063,25 +1077,28 @@ export const FinishedGoodsPage: React.FC = () => {
                 <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
                   Authorized Person *
                 </label>
-                <select
+                <Select
                   value={adjUser}
-                  onChange={(e) => setAdjUser(e.target.value)}
-                  className="w-full h-9 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                  required
+                  onValueChange={(val) => setAdjUser(val)}
                 >
-                  {authorizedEmployees.map((emp) => (
-                    <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                      {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                    </option>
-                  ))}
-                  {authorizedEmployees.length === 0 && (
-                    <>
-                      <option value="Ramesh Sharma (Store Manager)">Ramesh Sharma &bull; Store Manager</option>
-                      <option value="Anand Deshmukh (Plant Manager)">Anand Deshmukh &bull; Plant Manager</option>
-                      <option value="System Super Admin">System Super Admin</option>
-                    </>
-                  )}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder="-- Select Authorized Person --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {authorizedEmployees.map((emp) => (
+                      <SelectItem key={emp.id} value={`${emp.name} (${emp.role})`} className="text-xs">
+                        {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                      </SelectItem>
+                    ))}
+                    {authorizedEmployees.length === 0 && (
+                      <>
+                        <SelectItem value="Ramesh Sharma (Store Manager)" className="text-xs">Ramesh Sharma &bull; Store Manager</SelectItem>
+                        <SelectItem value="Anand Deshmukh (Plant Manager)" className="text-xs">Anand Deshmukh &bull; Plant Manager</SelectItem>
+                        <SelectItem value="System Super Admin" className="text-xs">System Super Admin</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">

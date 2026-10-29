@@ -508,31 +508,29 @@ export const ProcurementPage: React.FC = () => {
             <form onSubmit={handleCreatePO} className="space-y-4 text-xs">
               <div>
                 <label className="block font-semibold mb-1">Select Material *</label>
-                <select
+                <Select
                   value={newPOMatId}
-                  onChange={(e) => {
-                    setNewPOMatId(e.target.value);
-                    const m = materials.find((mat) => mat.id === e.target.value);
+                  onValueChange={(val) => {
+                    setNewPOMatId(val);
+                    const m = materials.find((mat) => mat.id === val);
                     if (m) {
                       setNewPOSupplier(m.supplier);
                       setNewPORate(m.standardCost);
                     }
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                  disabled={materials.length === 0}
                 >
-                  {materials.length === 0 ? (
-                    <option value="">No raw materials found. Please add materials in Master Data first.</option>
-                  ) : (
-                    <>
-                      <option value="">-- Select Raw Material --</option>
-                      {materials.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.code} - {m.name}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder={materials.length === 0 ? "No raw materials found" : "-- Select Raw Material --"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {materials.map((m) => (
+                      <SelectItem key={m.id} value={m.id} className="text-xs">
+                        {m.code} - {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {materials.length === 0 && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                     ⚠️ No raw materials available. Please add materials in Master Data &gt; Materials first.
@@ -542,25 +540,22 @@ export const ProcurementPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold mb-1">Approved Supplier / Vendor *</label>
-                <select
+                <Select
                   value={newPOSupplier}
-                  onChange={(e) => setNewPOSupplier(e.target.value)}
-                  required
-                  className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                  onValueChange={(val) => setNewPOSupplier(val)}
+                  disabled={allSuppliers.length === 0}
                 >
-                  {allSuppliers.length === 0 ? (
-                    <option value="">No approved vendors found. Please add suppliers in Master Data first.</option>
-                  ) : (
-                    <>
-                      <option value="">-- Select Supplier / Vendor --</option>
-                      {allSuppliers.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder={allSuppliers.length === 0 ? "No approved vendors found" : "-- Select Supplier / Vendor --"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allSuppliers.map((s) => (
+                      <SelectItem key={s} value={s} className="text-xs">
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {allSuppliers.length === 0 && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                     ⚠️ No vendors configured. Please add suppliers in Master Data &gt; Vendors &amp; Warehouses first.
@@ -697,36 +692,43 @@ export const ProcurementPage: React.FC = () => {
 
                 <div>
                   <label className="block font-semibold mb-1">Quality Inspection Officer / Store Manager *</label>
-                  <select
+                  <Select
                     value={grnInspector}
-                    onChange={(e) => setGrnInspector(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
-                    required
+                    onValueChange={(val) => setGrnInspector(val)}
                   >
-                    {authorizedEmployees.map((emp) => (
-                      <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                        {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
-                      </option>
-                    ))}
-                    {authorizedEmployees.length === 0 && (
-                      <option value="Store Manager">Store Manager</option>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="-- Select Inspector --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {authorizedEmployees.map((emp) => (
+                        <SelectItem key={emp.id} value={`${emp.name} (${emp.role})`} className="text-xs">
+                          {emp.name} &bull; {emp.role} ({emp.plant || 'All Plants'})
+                        </SelectItem>
+                      ))}
+                      {authorizedEmployees.length === 0 && (
+                        <SelectItem value="Store Manager" className="text-xs">Store Manager</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block font-semibold mb-1">Destination Warehouse</label>
-                  <select
+                  <Select
                     value={grnWarehouse}
-                    onChange={(e) => setGrnWarehouse(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs"
+                    onValueChange={(val) => setGrnWarehouse(val)}
                   >
-                    {dynamicWarehouses.map((wh) => (
-                      <option key={wh} value={wh}>
-                        {wh}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="-- Select Warehouse --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dynamicWarehouses.map((wh) => (
+                        <SelectItem key={wh} value={wh} className="text-xs">
+                          {wh}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -806,17 +808,21 @@ export const ProcurementPage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block font-semibold mb-1">Order Status</label>
-                    <select
+                    <Select
                       value={editPOStatus}
-                      onChange={(e) => setEditPOStatus(e.target.value as any)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                      onValueChange={(val: any) => setEditPOStatus(val)}
                     >
-                      <option value="Ordered">Ordered (Pending Dispatch)</option>
-                      <option value="In Transit">In Transit</option>
-                      <option value="Partially Received">Partially Received</option>
-                      <option value="Delayed">Delayed</option>
-                      <option value="Closed">Closed</option>
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="Order Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Ordered" className="text-xs">Ordered (Pending Dispatch)</SelectItem>
+                        <SelectItem value="In Transit" className="text-xs">In Transit</SelectItem>
+                        <SelectItem value="Partially Received" className="text-xs">Partially Received</SelectItem>
+                        <SelectItem value="Delayed" className="text-xs">Delayed</SelectItem>
+                        <SelectItem value="Closed" className="text-xs">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

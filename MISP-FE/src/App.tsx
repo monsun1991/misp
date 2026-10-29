@@ -22,6 +22,7 @@ const EmployeesPage = lazy(() => import('./pages/Employees'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const ReportsPage = lazy(() => import('./pages/Reports'));
 const UsersAccessPage = lazy(() => import('./pages/Users'));
+const ProfilePage = lazy(() => import('./pages/Profile'));
 const NotFoundPage = lazy(() => import('./pages/NotFound'));
 
 const FullScreenSpinner = () => (
@@ -61,6 +62,7 @@ export function App() {
             <Route path="/settings" element={<PermissionGuard requiredPermissions={['settings.manage']}><SettingsPage /></PermissionGuard>} />
             <Route path="/users" element={<PermissionGuard requiredPermissions={['users.manage']}><UsersAccessPage /></PermissionGuard>} />
             <Route path="/reports" element={<PermissionGuard requiredPermissions={['reports.view']}><ReportsPage /></PermissionGuard>} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
         </Route>
 

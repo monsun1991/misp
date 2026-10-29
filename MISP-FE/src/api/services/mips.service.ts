@@ -298,6 +298,27 @@ export const mipsService = {
     await api.delete(`${API_ENDPOINTS.mips.categories}/${id}`);
   },
 
+  // Master Wattages
+  getWattages: async (status?: string): Promise<any[]> => {
+    try {
+      const res = await api.get(API_ENDPOINTS.mips.wattages, { params: status ? { status } : undefined });
+      return res.data?.data || [];
+    } catch (e) {
+      return [];
+    }
+  },
+  createWattage: async (data: any): Promise<any> => {
+    const res = await api.post(API_ENDPOINTS.mips.wattages, data);
+    return res.data?.data;
+  },
+  updateWattage: async (id: string, data: any): Promise<any> => {
+    const res = await api.put(`${API_ENDPOINTS.mips.wattages}/${id}`, data);
+    return res.data?.data;
+  },
+  deleteWattage: async (id: string): Promise<void> => {
+    await api.delete(`${API_ENDPOINTS.mips.wattages}/${id}`);
+  },
+
   // Dynamic Plants
   getPlants: async (): Promise<any[]> => {
     try {

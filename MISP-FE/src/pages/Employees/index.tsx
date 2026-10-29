@@ -876,24 +876,22 @@ export const EmployeesPage: React.FC = () => {
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       1. Plant Location (Facility) *
                     </label>
-                    <select
+                    <Select
                       value={modalPlant}
-                      onChange={(e) => handlePlantChange(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-blue-500"
+                      onValueChange={(val) => handlePlantChange(val)}
+                      disabled={plants.length === 0}
                     >
-                      {plants.length === 0 ? (
-                        <option value="">No plants available. Please add a plant in Settings first.</option>
-                      ) : (
-                        <>
-                          <option value="">-- Select Plant Location --</option>
-                          {plants.map((p) => (
-                            <option key={p.id} value={p.name}>
-                              {p.name} ({p.city})
-                            </option>
-                          ))}
-                        </>
-                      )}
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-white dark:bg-slate-900">
+                        <SelectValue placeholder={plants.length === 0 ? "No plants available" : "-- Select Plant Location --"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plants.map((p) => (
+                          <SelectItem key={p.id} value={p.name} className="text-xs">
+                            {p.name} ({p.city})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {plants.length === 0 ? (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                         ⚠️ No plants found. Please add a plant in Settings &gt; Plants &amp; Facilities first.
@@ -907,26 +905,22 @@ export const EmployeesPage: React.FC = () => {
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       2. Department (Filtered by Plant) *
                     </label>
-                    <select
+                    <Select
                       value={selectedDept}
-                      onChange={(e) => handleDeptChange(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-blue-500"
+                      onValueChange={(val) => handleDeptChange(val)}
+                      disabled={filteredDepartments.length === 0}
                     >
-                      {departments.length === 0 ? (
-                        <option value="">No departments available. Please add a department in Settings first.</option>
-                      ) : filteredDepartments.length === 0 ? (
-                        <option value="">No departments in this plant. Please add one in Settings.</option>
-                      ) : (
-                        <>
-                          <option value="">-- Select Department --</option>
-                          {filteredDepartments.map((d) => (
-                            <option key={d.id} value={d.name}>
-                              {d.name}
-                            </option>
-                          ))}
-                        </>
-                      )}
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-white dark:bg-slate-900">
+                        <SelectValue placeholder={filteredDepartments.length === 0 ? "No departments in plant" : "-- Select Department --"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredDepartments.map((d) => (
+                          <SelectItem key={d.id} value={d.name} className="text-xs">
+                            {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {departments.length === 0 ? (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                         ⚠️ No departments found. Please add a department in Settings &gt; Departments first.
@@ -949,34 +943,36 @@ export const EmployeesPage: React.FC = () => {
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       3. Reporting To (Department Head / Supervisor) *
                     </label>
-                    <select
+                    <Select
                       value={supervisor}
-                      onChange={(e) => setSupervisor(e.target.value)}
-                      className="w-full h-8 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 text-xs font-medium text-slate-900 dark:text-slate-100"
+                      onValueChange={(val) => setSupervisor(val)}
+                      disabled={employees.length === 0 && !currentDeptObj?.manager}
                     >
-                      {currentDeptObj?.manager && (
-                        <option value={currentDeptObj.manager}>
-                          {currentDeptObj.manager} (Department Manager - Default)
-                        </option>
-                      )}
-                      {employees
-                        .filter(
-                          (emp) =>
-                            emp.role.includes('Manager') ||
-                            emp.role.includes('Supervisor') ||
-                            emp.role.includes('Admin') ||
-                            emp.role.includes('Lead')
-                        )
-                        .map((emp) => (
-                          <option key={emp.id} value={`${emp.name} (${emp.role})`}>
-                            {emp.name} &bull; {emp.role} ({emp.department})
-                          </option>
-                        ))}
-                      {employees.length === 0 && (
-                        <option value="">No supervisors available. Please onboard staff first.</option>
-                      )}
-                    </select>
-                    {employees.length === 0 ? (
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-white dark:bg-slate-900">
+                        <SelectValue placeholder={!currentDeptObj?.manager && employees.length === 0 ? "No supervisors available" : "-- Select Supervisor --"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentDeptObj?.manager && (
+                          <SelectItem value={currentDeptObj.manager} className="text-xs">
+                            {currentDeptObj.manager} (Department Manager - Default)
+                          </SelectItem>
+                        )}
+                        {employees
+                          .filter(
+                            (emp) =>
+                              emp.role.includes('Manager') ||
+                              emp.role.includes('Supervisor') ||
+                              emp.role.includes('Admin') ||
+                              emp.role.includes('Lead')
+                          )
+                          .map((emp) => (
+                            <SelectItem key={emp.id} value={`${emp.name} (${emp.role})`} className="text-xs">
+                              {emp.name} &bull; {emp.role} ({emp.department})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {employees.length === 0 && !currentDeptObj?.manager ? (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                         ⚠️ No supervisors found. Onboard supervisors in Employees page first.
                       </p>
@@ -992,23 +988,27 @@ export const EmployeesPage: React.FC = () => {
                       4. Line / Sub-Team *
                     </label>
                     {currentDeptObj?.activeTeams && currentDeptObj.activeTeams.length > 0 ? (
-                      <select
+                      <Select
                         value={team}
-                        onChange={(e) => setTeam(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-blue-500"
+                        onValueChange={(val) => setTeam(val)}
                       >
-                        {currentDeptObj.activeTeams.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full h-9 text-xs font-semibold bg-white dark:bg-slate-900">
+                          <SelectValue placeholder="-- Select Sub-Team --" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currentDeptObj.activeTeams.map((t) => (
+                            <SelectItem key={t} value={t} className="text-xs">
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     ) : (
                       <Input
                         value={team}
                         onChange={(e) => setTeam(e.target.value)}
                         placeholder="e.g. Line 1 Alpha"
-                        className="h-8 text-xs"
+                        className="h-9 text-xs"
                       />
                     )}
                     <p className="text-[10px] text-slate-500 mt-1">Designated line or shift cell</p>
@@ -1021,24 +1021,22 @@ export const EmployeesPage: React.FC = () => {
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       5. Dynamic Role (RBAC) *
                     </label>
-                    <select
+                    <Select
                       value={selectedRole}
-                      onChange={(e) => setSelectedRole(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium"
+                      onValueChange={(val) => setSelectedRole(val)}
+                      disabled={roles.length === 0}
                     >
-                      {roles.length === 0 ? (
-                        <option value="">No roles configured. Please add a role in Settings first.</option>
-                      ) : (
-                        <>
-                          <option value="">-- Select Role --</option>
-                          {roles.map((r) => (
-                            <option key={r.id} value={r.name}>
-                              {r.name}
-                            </option>
-                          ))}
-                        </>
-                      )}
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-white dark:bg-slate-900">
+                        <SelectValue placeholder={roles.length === 0 ? "No roles configured" : "-- Select Role --"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.map((r) => (
+                          <SelectItem key={r.id} value={r.name} className="text-xs">
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {roles.length === 0 && (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
                         ⚠️ No roles configured. Please add a role in Settings &gt; Dynamic Roles first.
@@ -1054,7 +1052,7 @@ export const EmployeesPage: React.FC = () => {
                       placeholder="e.g. Station 3 - Potting"
                       value={workstation}
                       onChange={(e) => setWorkstation(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-9 text-xs"
                     />
                   </div>
 
@@ -1062,15 +1060,19 @@ export const EmployeesPage: React.FC = () => {
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       7. Onboarding Status
                     </label>
-                    <select
+                    <Select
                       value={status}
-                      onChange={(e) => setStatus(e.target.value as any)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs"
+                      onValueChange={(val: any) => setStatus(val)}
                     >
-                      <option value="Active">Active (Ready for Production)</option>
-                      <option value="Onboarding">Onboarding (Induction)</option>
-                      <option value="Probation">Probation (Under Evaluation)</option>
-                    </select>
+                      <SelectTrigger className="w-full h-9 text-xs font-semibold bg-white dark:bg-slate-900">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active" className="text-xs">Active (Ready for Production)</SelectItem>
+                        <SelectItem value="Onboarding" className="text-xs">Onboarding (Induction)</SelectItem>
+                        <SelectItem value="Probation" className="text-xs">Probation (Under Evaluation)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
@@ -1389,16 +1391,20 @@ export const EmployeesPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Status</label>
-                  <select
+                  <Select
                     value={editEmpStatus}
-                    onChange={(e) => setEditEmpStatus(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2"
+                    onValueChange={(val: any) => setEditEmpStatus(val)}
                   >
-                    <option value="Active">Active</option>
-                    <option value="Onboarding">Onboarding</option>
-                    <option value="Probation">Probation</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active" className="text-xs">Active</SelectItem>
+                      <SelectItem value="Onboarding" className="text-xs">Onboarding</SelectItem>
+                      <SelectItem value="Probation" className="text-xs">Probation</SelectItem>
+                      <SelectItem value="Inactive" className="text-xs">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -1427,69 +1433,78 @@ export const EmployeesPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Facility / Plant</label>
-                  <select
+                  <Select
                     value={editEmpPlant}
-                    onChange={(e) => setEditEmpPlant(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    onValueChange={(val) => setEditEmpPlant(val)}
+                    disabled={plants.length === 0}
                   >
-                    {plants.length === 0 ? (
-                      <option value="">No plants available. Please add a plant in Settings first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Plant Location --</option>
-                        {plants.map((p) => (
-                          <option key={p.id} value={p.name}>
-                            {p.name} ({p.city})
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={plants.length === 0 ? "No plants available" : "-- Select Plant Location --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plants.map((p) => (
+                        <SelectItem key={p.id} value={p.name} className="text-xs">
+                          {p.name} ({p.city})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {plants.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ Please add plants in Settings first.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Department</label>
-                  <select
+                  <Select
                     value={editEmpDept}
-                    onChange={(e) => setEditEmpDept(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    onValueChange={(val) => setEditEmpDept(val)}
+                    disabled={departments.length === 0}
                   >
-                    {departments.length === 0 ? (
-                      <option value="">No departments available. Please add a department in Settings first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Department --</option>
-                        {departments.map((d) => (
-                          <option key={d.id} value={d.name}>
-                            {d.name} ({d.plant || 'All Plants'})
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={departments.length === 0 ? "No departments available" : "-- Select Department --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((d) => (
+                        <SelectItem key={d.id} value={d.name} className="text-xs">
+                          {d.name} ({d.plant || 'All Plants'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {departments.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ Please add departments in Settings first.
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1">Operational Role (RBAC)</label>
-                  <select
+                  <Select
                     value={editEmpRole}
-                    onChange={(e) => setEditEmpRole(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    onValueChange={(val) => setEditEmpRole(val)}
+                    disabled={roles.length === 0}
                   >
-                    {roles.length === 0 ? (
-                      <option value="">No roles available. Please add a role in Settings first.</option>
-                    ) : (
-                      <>
-                        <option value="">-- Select Role --</option>
-                        {roles.map((r) => (
-                          <option key={r.id} value={r.name}>
-                            {r.name}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={roles.length === 0 ? "No roles available" : "-- Select Role --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((r) => (
+                        <SelectItem key={r.id} value={r.name} className="text-xs">
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {roles.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ Please add roles in Settings first.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Assigned Team / Cell</label>
@@ -1512,21 +1527,27 @@ export const EmployeesPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Reporting Supervisor *</label>
-                  <select
+                  <Select
                     value={editEmpSupervisor}
-                    onChange={(e) => setEditEmpSupervisor(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-lg p-2 text-xs font-semibold"
+                    onValueChange={(val) => setEditEmpSupervisor(val)}
+                    disabled={employees.length === 0}
                   >
-                    {employees.length === 0 ? (
-                      <option value="">No staff members available. Please onboard staff first.</option>
-                    ) : (
-                      employees.map((e) => (
-                        <option key={e.id} value={`${e.name} (${e.role})`}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder={employees.length === 0 ? "No staff members available" : "-- Select Supervisor --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((e) => (
+                        <SelectItem key={e.id} value={`${e.name} (${e.role})`} className="text-xs">
                           {e.name} &bull; {e.role} ({e.plant || 'All Plants'})
-                        </option>
-                      ))
-                    )}
-                  </select>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {employees.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                      ⚠️ Please onboard employees first.
+                    </p>
+                  )}
                 </div>
               </div>
 
