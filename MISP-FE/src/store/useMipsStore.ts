@@ -2115,12 +2115,49 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
                 ? (typeof p.bomJson === 'string' ? JSON.parse(p.bomJson) : p.bomJson)
                 : [],
             })),
-            purchaseOrders: purchaseOrders || [],
-            kits: kits || [],
-            productionLogs: productionLogs || [],
+            purchaseOrders: (purchaseOrders || []).map((po: any) => ({
+              ...po,
+              items: Array.isArray(po.items)
+                ? po.items
+                : po.itemsJson
+                ? (typeof po.itemsJson === 'string' ? JSON.parse(po.itemsJson) : po.itemsJson)
+                : [],
+            })),
+            kits: (kits || []).map((k: any) => ({
+              ...k,
+              items: Array.isArray(k.items)
+                ? k.items
+                : k.itemsJson
+                ? (typeof k.itemsJson === 'string' ? JSON.parse(k.itemsJson) : k.itemsJson)
+                : [],
+            })),
+            productionLogs: (productionLogs || []).map((pl: any) => ({
+              ...pl,
+              unitsPerHour: Number(pl.unitsPerHour) || 0,
+              productivityPct: Number(pl.productivityPct) || 0,
+            })),
             stockLedger: stockLedgers || [],
-            customerPOs: customerPOs || [],
-            dispatchRecords: outwardDispatches || [],
+            customerPOs: (customerPOs || []).map((cpo: any) => ({
+              ...cpo,
+              totalAmount: Number(cpo.totalAmount) || 0,
+              totalOrderedQty: Number(cpo.totalOrderedQty) || 0,
+              totalDispatchedQty: Number(cpo.totalDispatchedQty) || 0,
+              totalPendingQty: Number(cpo.totalPendingQty) || 0,
+              items: Array.isArray(cpo.items)
+                ? cpo.items
+                : cpo.itemsJson
+                ? (typeof cpo.itemsJson === 'string' ? JSON.parse(cpo.itemsJson) : cpo.itemsJson)
+                : [],
+            })),
+            dispatchRecords: (outwardDispatches || []).map((dc: any) => ({
+              ...dc,
+              totalDispatchedUnits: Number(dc.totalDispatchedUnits) || 0,
+              items: Array.isArray(dc.items)
+                ? dc.items
+                : dc.itemsJson
+                ? (typeof dc.itemsJson === 'string' ? JSON.parse(dc.itemsJson) : dc.itemsJson)
+                : [],
+            })),
             finishedGoods: finishedGoods || [],
             roles: roles || [],
             departments: (departments || []).map((d: any) => ({

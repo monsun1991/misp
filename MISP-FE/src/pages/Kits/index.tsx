@@ -183,7 +183,7 @@ export const KitsPage: React.FC = () => {
     if (!reconcileKit) return;
 
     // Update progress in store first
-    const updates = reconcileKit.items.map((item) => {
+    const updates = (reconcileKit.items || []).map((item) => {
       const inp = consumptionInputs[item.materialId] || { consumed: 0, returned: 0, wastage: 0 };
       return {
         materialId: item.materialId,
@@ -234,11 +234,12 @@ export const KitsPage: React.FC = () => {
     const emp = employeeMap[k.assignedEmployee];
     emp.totalExpectedUnits += k.plannedBatchQty;
 
-    const kitMaxDefect = Math.max(...k.items.map((i) => i.wastageQty), 0);
+    const kitItems = Array.isArray(k.items) ? k.items : [];
+    const kitMaxDefect = Math.max(...kitItems.map((i) => i.wastageQty || 0), 0);
     emp.totalDefectiveUnits += kitMaxDefect;
     emp.netProducedUnits += Math.max(0, k.plannedBatchQty - kitMaxDefect);
 
-    k.items.forEach((item) => {
+    kitItems.forEach((item) => {
       if (!emp.materials[item.materialName]) {
         emp.materials[item.materialName] = {
           materialName: item.materialName,
@@ -579,18 +580,18 @@ export const KitsPage: React.FC = () => {
                         <div>
                           <span className="text-slate-400">Defected Sub-parts:</span>{' '}
                           <strong className="text-red-500 font-bold">
-                            {Math.max(...kit.items.map((i) => i.wastageQty), 0).toLocaleString()} items
+                            {Math.max(...(kit.items || []).map((i) => i.wastageQty || 0), 0).toLocaleString()} items
                           </strong>
                         </div>
                         <div>
                           <span className="text-slate-400">Net Produced:</span>{' '}
                           <strong className="text-emerald-600 font-extrabold">
-                            {Math.max(0, kit.plannedBatchQty - Math.max(...kit.items.map((i) => i.wastageQty), 0)).toLocaleString()} units
+                            {Math.max(0, kit.plannedBatchQty - Math.max(...(kit.items || []).map((i) => i.wastageQty || 0), 0)).toLocaleString()} units
                           </strong>
                         </div>
                       </div>
                       <div className="text-[11px] font-mono text-slate-500 bg-white dark:bg-slate-900 px-2.5 py-0.5 rounded border">
-                        {kit.plannedBatchQty} (Expected) &minus; {Math.max(...kit.items.map((i) => i.wastageQty), 0)} (Defects) = {Math.max(0, kit.plannedBatchQty - Math.max(...kit.items.map((i) => i.wastageQty), 0))} Net Units
+                        {kit.plannedBatchQty} (Expected) &minus; {Math.max(...(kit.items || []).map((i) => i.wastageQty || 0), 0)} (Defects) = {Math.max(0, kit.plannedBatchQty - Math.max(...(kit.items || []).map((i) => i.wastageQty || 0), 0))} Net Units
                       </div>
                     </div>
 
@@ -628,7 +629,7 @@ export const KitsPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {kit.items.map((item) => (
+                          {(kit.items || []).map((item) => (
                             <tr key={item.materialId}>
                               <td className="py-2 px-3 font-medium text-slate-800 dark:text-slate-200">
                                 {item.materialName} ({item.materialCode})
@@ -1034,7 +1035,7 @@ export const KitsPage: React.FC = () => {
                 )}
 
                 <div className="space-y-3">
-                  {reconcileKit.items.map((item) => {
+                  {(reconcileKit.items || []).map((item) => {
                     const issued = item.totalIssuedQty ?? item.issuedQty ?? 0;
                     const currentInp = consumptionInputs[item.materialId] || {
                       consumed: issued,

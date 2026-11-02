@@ -1354,7 +1354,7 @@ export const OrdersDispatchPage: React.FC = () => {
                       </td>
                       <td className="py-3 px-3">
                         <div className="space-y-1 max-w-xs">
-                          {po.items.map((item, idx) => (
+                          {(po.items || []).map((item, idx) => (
                             <div key={idx} className="text-[11px] flex justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-0.5">
                               <span className="font-medium text-slate-700 dark:text-slate-300 truncate">
                                 {item.productName}
@@ -1748,7 +1748,7 @@ export const OrdersDispatchPage: React.FC = () => {
                   1. Enter Quantities To Dispatch In This Shipment:
                 </label>
                 <div className="space-y-2">
-                  {selectedPOForDispatch.items.map((item) => (
+                  {(selectedPOForDispatch.items || []).map((item) => (
                     <div
                       key={item.productId}
                       className="p-3 rounded-lg border bg-slate-50 dark:bg-slate-850 space-y-1.5"
@@ -1962,7 +1962,7 @@ export const OrdersDispatchPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {activeDispatchChallan.items.map((item, idx) => (
+                  {(activeDispatchChallan.items || []).map((item, idx) => (
                     <tr key={idx}>
                       <td className="py-1 font-medium">{item.productName}</td>
                       <td className="py-1 text-right font-bold">{item.qty}</td>
