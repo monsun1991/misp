@@ -522,11 +522,12 @@ export const KitsPage: React.FC = () => {
                 </div>
               )}
               {paginatedKits.map((kit) => {
-                const totalIssued = kit.items.reduce((acc, i) => acc + i.totalIssuedQty, 0);
-                const totalConsumed = kit.items.reduce((acc, i) => acc + i.consumedQty, 0);
-                const totalReturned = kit.items.reduce((acc, i) => acc + i.returnedQty, 0);
-                const totalWastage = kit.items.reduce((acc, i) => acc + i.wastageQty, 0);
-                const totalPendingBalance = kit.items.reduce((acc, i) => acc + i.balanceWithEmployee, 0);
+                const kitItems = Array.isArray(kit.items) ? kit.items : [];
+                const totalIssued = kitItems.reduce((acc, i) => acc + (Number(i.totalIssuedQty) || 0), 0);
+                const totalConsumed = kitItems.reduce((acc, i) => acc + (Number(i.consumedQty) || 0), 0);
+                const totalReturned = kitItems.reduce((acc, i) => acc + (Number(i.returnedQty) || 0), 0);
+                const totalWastage = kitItems.reduce((acc, i) => acc + (Number(i.wastageQty) || 0), 0);
+                const totalPendingBalance = kitItems.reduce((acc, i) => acc + (Number(i.balanceWithEmployee) || 0), 0);
 
                 const isBalanced = totalIssued === totalConsumed + totalReturned + totalWastage;
 

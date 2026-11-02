@@ -59,24 +59,24 @@ export const DashboardPage: React.FC = () => {
   const productionLogs = rawProductionLogs.filter((p) => isPlantMatch(p.plant, selectedPlant));
 
   // Key Inventory Metrics
-  const totalStockUnits = materials.reduce((acc, m) => acc + m.currentStock, 0);
-  const totalStockValuation = materials.reduce((acc, m) => acc + (m.currentStock * m.standardCost), 0);
-  const lowStockMaterials = materials.filter((m) => m.currentStock <= m.reorderLevel);
-  const criticalShortages = materials.filter((m) => m.currentStock <= m.safetyStock);
-  const excessStockMaterials = materials.filter((m) => m.currentStock > m.maxStock * 0.9);
-  const totalWithEmployees = materials.reduce((acc, m) => acc + m.stockWithEmployees, 0);
+  const totalStockUnits = materials.reduce((acc, m) => acc + (Number(m.currentStock) || 0), 0);
+  const totalStockValuation = materials.reduce((acc, m) => acc + ((Number(m.currentStock) || 0) * (Number(m.standardCost) || 0)), 0);
+  const lowStockMaterials = materials.filter((m) => (Number(m.currentStock) || 0) <= (Number(m.reorderLevel) || 0));
+  const criticalShortages = materials.filter((m) => (Number(m.currentStock) || 0) <= (Number(m.safetyStock) || 0));
+  const excessStockMaterials = materials.filter((m) => (Number(m.currentStock) || 0) > ((Number(m.maxStock) || 0) * 0.9));
+  const totalWithEmployees = materials.reduce((acc, m) => acc + (Number(m.stockWithEmployees) || 0), 0);
 
   // Procurement Metrics
   const openPOs = purchaseOrders.filter((po) => po.status === 'Ordered' || po.status === 'In Transit');
   const inTransitPOs = purchaseOrders.filter((po) => po.status === 'In Transit');
   const delayedPOs = purchaseOrders.filter((po) => po.status === 'Delayed');
-  const pendingReceiptUnits = openPOs.reduce((acc, po) => acc + po.pendingQty, 0);
+  const pendingReceiptUnits = openPOs.reduce((acc, po) => acc + (Number(po.pendingQty) || 0), 0);
 
   // Production Metrics
   const todayProduction = productionLogs.slice(0, 5);
-  const todayTarget = todayProduction.reduce((acc, log) => acc + log.targetQty, 0);
-  const todayActual = todayProduction.reduce((acc, log) => acc + log.actualQty, 0);
-  const todayRejects = todayProduction.reduce((acc, log) => acc + log.rejectedQty, 0);
+  const todayTarget = todayProduction.reduce((acc, log) => acc + (Number(log.targetQty) || 0), 0);
+  const todayActual = todayProduction.reduce((acc, log) => acc + (Number(log.actualQty) || 0), 0);
+  const todayRejects = todayProduction.reduce((acc, log) => acc + (Number(log.rejectedQty) || 0), 0);
   const overallProductivity = todayTarget > 0 ? Math.round((todayActual / todayTarget) * 100) : 100;
 
   // Kit Metrics
@@ -258,7 +258,7 @@ export const DashboardPage: React.FC = () => {
               <span className="text-xs font-normal text-[#146b68] dark:text-[#84cc16]">open production kits</span>
             </div>
             <div className="text-xs text-slate-500 mt-1 flex items-center justify-between">
-              <span>{totalWithEmployees} units with employees</span>
+              <span>{totalWithEmployees.toLocaleString()} units with employees</span>
               <Link to="/kits" className="text-[#146b68] dark:text-[#84cc16] font-medium hover:underline">
                 Reconciliation &rarr;
               </Link>

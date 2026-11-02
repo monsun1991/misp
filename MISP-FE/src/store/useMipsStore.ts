@@ -2101,6 +2101,11 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
           set({
             materials: (materials || []).map((m: any) => ({
               ...m,
+              currentStock: Number(m.currentStock) || 0,
+              stockWithEmployees: Number(m.stockWithEmployees) || 0,
+              safetyStock: Number(m.safetyStock) || 0,
+              minStock: Number(m.minStock) || 0,
+              maxStock: Number(m.maxStock) || 0,
               standardCost: Number(m.standardCost) || 0,
               reorderLevel: Number(m.reorderLevel ?? m.reorderPoint ?? 0),
             })),
