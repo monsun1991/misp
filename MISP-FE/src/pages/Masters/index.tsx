@@ -994,10 +994,10 @@ export const MastersPage: React.FC = () => {
                           {m.safetyStock.toLocaleString()} {m.uom}
                         </td>
                         <td className="py-3 px-3 text-right font-medium">
-                          {m.reorderLevel.toLocaleString()} {m.uom}
+                          {Number(m.reorderLevel ?? (m as any).reorderPoint ?? 0).toLocaleString()} {m.uom}
                         </td>
                         <td className="py-3 px-3 text-right font-bold text-slate-900 dark:text-slate-100">
-                          ₹{m.standardCost.toFixed(2)}
+                          ₹{Number(m.standardCost || 0).toFixed(2)}
                         </td>
                         <td className="py-3 px-3 text-center">
                           <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">
@@ -1116,7 +1116,7 @@ export const MastersPage: React.FC = () => {
                     <div className="pt-2 border-t flex items-center justify-between text-xs">
                       <span className="text-slate-500">Standard Cost:</span>
                       <span className="font-bold text-base text-slate-900 dark:text-slate-100">
-                        ₹{prod.standardCost.toFixed(2)}
+                        ₹{Number(prod.standardCost || 0).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between pt-1 flex-wrap gap-1">

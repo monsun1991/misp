@@ -2099,11 +2099,16 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
           ]);
 
           set({
-            materials: materials || [],
+            materials: (materials || []).map((m: any) => ({
+              ...m,
+              standardCost: Number(m.standardCost) || 0,
+              reorderLevel: Number(m.reorderLevel ?? m.reorderPoint ?? 0),
+            })),
             categories: categories || [],
             wattages: wattages || [],
             products: (products || []).map((p: any) => ({
               ...p,
+              standardCost: Number(p.standardCost) || 0,
               bom: Array.isArray(p.bom)
                 ? p.bom
                 : p.bomJson
