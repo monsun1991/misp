@@ -2074,6 +2074,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
             auditLogs,
             users,
             categories,
+            wattages,
           ] = await Promise.all([
             mipsService.getMaterials(),
             mipsService.getProducts(),
