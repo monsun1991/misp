@@ -194,6 +194,20 @@ export const MastersPage: React.FC = () => {
   const [addBomQty, setAddBomQty] = useState<number>(1);
   const [bomSaveSuccess, setBomSaveSuccess] = useState(false);
 
+  // Keep selected product & its BOM in sync when products load
+  useEffect(() => {
+    if (!selectedProduct && products.length > 0) {
+      setSelectedProduct(products[0]);
+      setEditingBOM(products[0].bom || []);
+    } else if (selectedProduct) {
+      const match = products.find((p) => p.id === selectedProduct.id);
+      if (match && match !== selectedProduct) {
+        setSelectedProduct(match);
+        setEditingBOM(match.bom || []);
+      }
+    }
+  }, [products, selectedProduct]);
+
   // New Supplier form state
   const [newSupName, setNewSupName] = useState('');
   const [newSupCat, setNewSupCat] = useState('Electronics (LEDs, Drivers, PCBs)');
@@ -834,7 +848,11 @@ export const MastersPage: React.FC = () => {
             <button
               onClick={() => {
                 setActiveTab('bom');
-                setEditingBOM(selectedProduct?.bom || []);
+                const target = selectedProduct || products[0];
+                if (target) {
+                  setSelectedProduct(target);
+                  setEditingBOM(target.bom || []);
+                }
               }}
               className={`text-xs px-3 py-1.5 rounded-md font-medium transition-all ${
                 activeTab === 'bom'
@@ -1425,64 +1443,69 @@ export const MastersPage: React.FC = () => {
       )}
 
       {/* Tab 3: Interactive Bill of Materials (BOM) Builder & Editor */}
-      {activeTab === 'bom' && (
-        products.length === 0 || !selectedProduct ? (
-          <Card className="border border-slate-200 dark:border-slate-800 p-12 text-center">
-            <Layers className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">No Finished Products Found</h3>
-            <p className="text-xs text-slate-500 mb-4 max-w-md mx-auto">
-              Please register at least one finished luminaire in the Products tab first before configuring its Bill of Materials.
-            </p>
-            <Button
-              onClick={() => setActiveTab('products')}
-              size="sm"
-              className="bg-[#183638] text-[#84cc16] hover:bg-[#183638]/90 text-xs font-semibold"
-            >
-              Go to Products Tab
-            </Button>
-          </Card>
-        ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border border-slate-200 dark:border-slate-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Select Finished Product</CardTitle>
-              <CardDescription>Select luminaire to inspect or modify its recipe</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {products.map((p) => (
-                <div
-                  key={p.id}
-                  onClick={() => {
-                    setSelectedProduct(p);
-                    setEditingBOM(p.bom || []);
-                  }}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    selectedProduct?.id === p.id
-                      ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/30'
-                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
-                  }`}
-                >
-                  <div className="font-bold text-xs text-slate-800 dark:text-slate-200">{p.name}</div>
-                  <div className="text-[11px] text-slate-500 flex items-center justify-between mt-1">
-                    <span className="font-mono text-blue-600">{p.code}</span>
-                    <span className="font-semibold">{p.wattage}</span>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card className="md:col-span-2 border border-slate-200 dark:border-slate-800 space-y-4">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between border-b">
-              <div>
-                <CardTitle className="text-base font-semibold">
-                  Interactive BOM Builder: {selectedProduct.name}
-                </CardTitle>
-                <CardDescription>
-                  Define component requirements to manufacture 1 finished unit of {selectedProduct.code}
-                </CardDescription>
-              </div>
+      {activeTab === 'bom' && (() => {
+        const activeProd = selectedProduct || products[0];
+        if (products.length === 0 || !activeProd) {
+          return (
+            <Card className="border border-slate-200 dark:border-slate-800 p-12 text-center">
+              <Layers className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">No Finished Products Found</h3>
+              <p className="text-xs text-slate-500 mb-4 max-w-md mx-auto">
+                Please register at least one finished luminaire in the Products tab first before configuring its Bill of Materials.
+              </p>
               <Button
+                onClick={() => setActiveTab('products')}
+                size="sm"
+                className="bg-[#183638] text-[#84cc16] hover:bg-[#183638]/90 text-xs font-semibold"
+              >
+                Go to Products Tab
+              </Button>
+            </Card>
+          );
+        }
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="border border-slate-200 dark:border-slate-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold">Select Finished Product</CardTitle>
+                <CardDescription>Select luminaire to inspect or modify its recipe</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {products.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedProduct(p);
+                      setEditingBOM(p.bom || []);
+                    }}
+                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                      activeProd.id === p.id
+                        ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/30'
+                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+                    }`}
+                  >
+                    <div className="font-bold text-xs text-slate-800 dark:text-slate-200">{p.name}</div>
+                    <div className="text-[11px] text-slate-500 flex items-center justify-between mt-1">
+                      <span className="font-mono text-blue-600">{p.code}</span>
+                      <span className="font-semibold">{p.wattage}</span>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2 border border-slate-200 dark:border-slate-800 space-y-4">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between border-b">
+                <div>
+                  <CardTitle className="text-base font-semibold">
+                    Interactive BOM Builder: {activeProd.name}
+                  </CardTitle>
+                  <CardDescription>
+                    Define component requirements to manufacture 1 finished unit of {activeProd.code}
+                  </CardDescription>
+                </div>
+                <Button
                 onClick={handleSaveBOM}
                 size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
@@ -1628,9 +1651,9 @@ export const MastersPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-        )
-      )}
+          </div>
+        );
+      })()}
 
       {/* Tab 4: Suppliers Master */}
       {activeTab === 'suppliers' && (
