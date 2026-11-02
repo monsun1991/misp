@@ -12,6 +12,9 @@ export class MaterialEntity extends BaseEntityModel {
   @Column({ type: "varchar", length: 100 })
   category!: string;
 
+  @Column({ type: "varchar", length: 50, nullable: true })
+  wattage?: string;
+
   @Column({ type: "varchar", length: 100, nullable: true })
   subCategory?: string;
 

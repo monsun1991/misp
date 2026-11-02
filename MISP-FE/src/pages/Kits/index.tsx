@@ -76,6 +76,34 @@ export const KitsPage: React.FC = () => {
   const selectedProduct = (products || []).find((p) => p.id === selectedProdId) || products[0];
   const productBom = selectedProduct && Array.isArray(selectedProduct.bom) ? selectedProduct.bom : [];
 
+  const bomAvailability = React.useMemo(() => {
+    return productBom.map((b) => {
+      const mat = materials.find((m) => m.id === b.materialId || m.code === b.materialCode);
+      const required = (b.qtyPerUnit || 1) * (batchQty || 0);
+      const available = mat?.currentStock || 0;
+      const isShortage = available < required;
+      return {
+        ...b,
+        required,
+        available,
+        isShortage,
+        shortageQty: Math.max(0, required - available),
+      };
+    });
+  }, [productBom, materials, batchQty]);
+
+  const hasShortages = bomAvailability.some((item) => item.isShortage);
+  const maxBuildableBatch = React.useMemo(() => {
+    if (productBom.length === 0) return 0;
+    const capacities = productBom.map((b) => {
+      const mat = materials.find((m) => m.id === b.materialId || m.code === b.materialCode);
+      const available = mat?.currentStock || 0;
+      const perUnit = b.qtyPerUnit || 1;
+      return Math.floor(available / perUnit);
+    });
+    return Math.max(0, Math.min(...capacities));
+  }, [productBom, materials]);
+
   const handleOpenCreateModal = () => {
     setShowCreateModal(true);
   };
@@ -86,6 +114,15 @@ export const KitsPage: React.FC = () => {
 
     if (productBom.length === 0) {
       alert('The selected product has no BOM (Bill of Materials) components defined. Please configure BOM in Masters first.');
+      return;
+    }
+
+    if (hasShortages) {
+      const shortageDetails = bomAvailability
+        .filter((item) => item.isShortage)
+        .map((item) => `• ${item.materialName} (${item.materialCode}): Required ${item.required}, Available ${item.available} (Short by ${item.shortageQty})`)
+        .join('\n');
+      alert(`Cannot Issue Kit: Material shortage detected!\n\n${shortageDetails}\n\nMaximum buildable batch with current stock: ${maxBuildableBatch} units.`);
       return;
     }
 
@@ -105,8 +142,9 @@ export const KitsPage: React.FC = () => {
       };
     });
 
-    createKit({
+    const result = createKit({
       productId: selectedProduct.id,
+      productCode: selectedProduct.code,
       productName: selectedProduct.name,
       plannedBatchQty: batchQty,
       assignedEmployee: assignedWorker,
@@ -115,6 +153,11 @@ export const KitsPage: React.FC = () => {
       plant: selectedPlant,
       items: kitItems,
     });
+
+    if (result && !result.success) {
+      alert(result.error || 'Failed to issue kit due to stock limits.');
+      return;
+    }
 
     setShowCreateModal(false);
   };
@@ -860,19 +903,77 @@ export const KitsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Automatic BOM preview */}
-                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border space-y-1">
-                  <div className="font-semibold text-slate-700 dark:text-slate-300">
-                    Materials To Be Issued ({batchQty} units BOM multiplier):
+                {/* Shortage Alert Banner */}
+                {hasShortages && (
+                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="font-bold flex items-center gap-1.5 text-xs text-red-700 dark:text-red-300">
+                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                        Shortage Alert: Cannot Issue Kit
+                      </div>
+                      {maxBuildableBatch > 0 ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => setBatchQty(maxBuildableBatch)}
+                          className="h-6 px-2 text-[10px] bg-red-100 hover:bg-red-200 text-red-800 border border-red-300"
+                        >
+                          Set to Max Buildable ({maxBuildableBatch} units)
+                        </Button>
+                      ) : (
+                        <span className="text-[10px] font-bold text-red-600">0 units buildable</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-red-600 dark:text-red-400">
+                      Required material quantities exceed available warehouse inventory. You can issue up to <strong>{maxBuildableBatch} units</strong> with current stock.
+                    </p>
+                  </div>
+                )}
+
+                {/* Automatic BOM preview with Live Stock Comparison */}
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      Materials To Be Issued ({batchQty} units BOM multiplier):
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Max Buildable: <strong className={maxBuildableBatch < batchQty ? "text-red-600 font-bold" : "text-emerald-600 font-bold"}>{maxBuildableBatch} units</strong>
+                    </span>
                   </div>
                   {productBom.length > 0 ? (
-                    <ul className="list-disc pl-4 text-[11px] text-slate-500 space-y-0.5">
-                      {productBom.map((b) => (
-                        <li key={b.materialId}>
-                          {b.materialName}: <strong>{(b.qtyPerUnit || 1) * batchQty} {b.uom}</strong> (BOM: {b.qtyPerUnit}/unit)
-                        </li>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                      {bomAvailability.map((b) => (
+                        <div
+                          key={b.materialId}
+                          className={`p-2 rounded-lg flex items-center justify-between text-[11px] border ${
+                            b.isShortage
+                              ? 'bg-red-50/70 dark:bg-red-950/30 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <div>
+                            <div className="font-semibold">{b.materialName}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              {b.materialCode} &bull; BOM: {b.qtyPerUnit} {b.uom}/unit
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-[11px]">
+                              Required: <strong>{b.required} {b.uom}</strong> &bull; Stock: <strong>{b.available} {b.uom}</strong>
+                            </div>
+                            {b.isShortage ? (
+                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 bg-red-600 text-white font-bold mt-0.5">
+                                Shortage: {b.shortageQty} {b.uom}
+                              </Badge>
+                            ) : (
+                              <Badge className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-800 border-emerald-300 font-medium mt-0.5">
+                                ✓ In Stock
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
                     <p className="text-[11px] text-amber-600 dark:text-amber-400 italic">
                       {selectedProduct ? 'This product has no Bill of Materials (BOM) components defined.' : 'No products available to generate BOM.'}
@@ -885,8 +986,19 @@ export const KitsPage: React.FC = () => {
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" className="bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold">
-                  Issue Kit & Deduct Warehouse Stock
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={hasShortages || productBom.length === 0 || batchQty <= 0}
+                  className={
+                    hasShortages
+                      ? "bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed font-bold"
+                      : "bg-[#84cc16] hover:bg-[#72b012] text-[#143234] font-bold"
+                  }
+                >
+                  {hasShortages
+                    ? `Blocked: Shortage in ${bomAvailability.filter((i) => i.isShortage).length} Item(s)`
+                    : "Issue Kit & Deduct Warehouse Stock"}
                 </Button>
               </div>
             </form>

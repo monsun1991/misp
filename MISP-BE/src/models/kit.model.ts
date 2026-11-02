@@ -6,8 +6,8 @@ export class KitEntity extends BaseEntityModel {
   @Column({ type: "varchar", length: 100, unique: true })
   kitNumber!: string;
 
-  @Column({ type: "varchar", length: 100 })
-  productCode!: string;
+  @Column({ type: "varchar", length: 100, nullable: true, default: "N/A" })
+  productCode?: string;
 
   @Column({ type: "varchar", length: 255 })
   productName!: string;

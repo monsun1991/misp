@@ -510,7 +510,8 @@ export const FinishedGoodsPage: React.FC = () => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-900/60 border-y border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold">
-                    <th className="py-2.5 px-3">Product SKU & Description</th>
+                    <th className="py-2.5 px-3">Product Code</th>
+                    <th className="py-2.5 px-3">Luminaire Description</th>
                     <th className="py-2.5 px-3">Batch / Lot # & Origin</th>
                     <th className="py-2.5 px-3">Warehouse Zone</th>
                     <th className="py-2.5 px-3 text-right">On Hand</th>
@@ -524,7 +525,7 @@ export const FinishedGoodsPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-500">
+                      <td colSpan={10} className="py-8 text-center text-slate-500">
                         No finished goods match your search filters in {selectedPlant}.
                       </td>
                     </tr>
@@ -535,14 +536,18 @@ export const FinishedGoodsPage: React.FC = () => {
                         className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                       >
                         <td className="py-3 px-3">
+                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            {item.productCode}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">
                           <div className="font-semibold text-slate-900 dark:text-slate-100">
                             {item.productName}
                           </div>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[11px] text-slate-500">{item.productCode}</span>
                             {item.wattage && (
                               <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.2 rounded font-medium">
-                                {item.wattage}
+                                ⚡ {item.wattage}
                               </span>
                             )}
                             <span className="text-[10px] text-slate-400">({item.category})</span>
@@ -743,7 +748,8 @@ export const FinishedGoodsPage: React.FC = () => {
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-900/60 border-y border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold">
                     <th className="py-2.5 px-3">Date & Time</th>
-                    <th className="py-2.5 px-3">Product Name & Code</th>
+                    <th className="py-2.5 px-3">Product Code</th>
+                    <th className="py-2.5 px-3">Product Name</th>
                     <th className="py-2.5 px-3">Movement Type</th>
                     <th className="py-2.5 px-3">Ref Document</th>
                     <th className="py-2.5 px-3">Batch Lot #</th>
@@ -756,7 +762,7 @@ export const FinishedGoodsPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {filteredLedger.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-500">
+                      <td colSpan={10} className="py-8 text-center text-slate-500">
                         No finished goods transactions found matching your criteria.
                       </td>
                     </tr>
@@ -764,9 +770,13 @@ export const FinishedGoodsPage: React.FC = () => {
                     paginatedLedger.map((entry) => (
                       <tr key={entry.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
                         <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">{entry.date}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            {entry.productCode}
+                          </span>
+                        </td>
                         <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-slate-100">
                           {entry.productName}
-                          <span className="block font-mono text-[10px] text-slate-400">{entry.productCode}</span>
                         </td>
                         <td className="py-2.5 px-3">
                           {entry.transactionType === 'Production Inward' && (

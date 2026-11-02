@@ -700,13 +700,16 @@ export const InventoryPage: React.FC = () => {
                             <Cpu className="w-4 h-4" />
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
                                 {prod.name}
                               </span>
-                              <Badge variant="outline" className="text-[10px] font-mono border-[#146b68]/30 text-[#146b68] dark:text-[#84cc16]">
-                                {prod.code}
-                              </Badge>
+                              <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase">Product Code:</span>
+                                <span className="text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
+                                  {prod.code}
+                                </span>
+                              </div>
                               <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
                                 {prod.wattage} &bull; {prod.category}
                               </span>
@@ -831,6 +834,7 @@ export const InventoryPage: React.FC = () => {
                     <tr>
                       <th className="py-2.5 px-3">Material Code</th>
                       <th className="py-2.5 px-3">Description & Supplier</th>
+                      <th className="py-2.5 px-3">Product Code (BOM Link)</th>
                       <th className="py-2.5 px-3">Warehouse & Bin</th>
                       <th className="py-2.5 px-3 text-right">In Warehouse</th>
                       <th className="py-2.5 px-3 text-right text-amber-600 font-bold">On Floor (Staff)</th>
@@ -849,6 +853,9 @@ export const InventoryPage: React.FC = () => {
                       const isOverstock = mat.currentStock > mat.maxStock;
                       const rejections = getMaterialRejectionCount(mat.id);
                       const businessId = getMaterialBusinessId(mat.id, mat.code.split('-')[0]);
+                      const linkedProds = products.filter((p) =>
+                        (p.bom || []).some((b) => b.materialId === mat.id || b.materialCode === mat.code)
+                      );
 
                       return (
                         <tr key={mat.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
@@ -858,6 +865,23 @@ export const InventoryPage: React.FC = () => {
                           <td className="py-3 px-3">
                             <div className="font-medium text-slate-800 dark:text-slate-200">{mat.name}</div>
                             <div className="text-[10px] text-slate-400">Supplier: {mat.supplier}</div>
+                          </td>
+                          <td className="py-3 px-3">
+                            {linkedProds.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {linkedProds.map((p) => (
+                                  <span
+                                    key={p.id}
+                                    className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                    title={`${p.code} - ${p.name}`}
+                                  >
+                                    {p.code}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic">None</span>
+                            )}
                           </td>
                           <td className="py-3 px-3 text-slate-600 dark:text-slate-400">
                             <div className="flex items-center gap-1.5">

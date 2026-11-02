@@ -115,6 +115,27 @@ export const MastersPage: React.FC = () => {
     return defaults;
   }, [wattages]);
 
+  const getWattageOptionsWithFallback = React.useCallback(
+    (currentVal?: string) => {
+      const list = [...dynamicWattageList];
+      if (
+        currentVal &&
+        currentVal !== 'N/A' &&
+        !list.some((w) => w.name.trim().toLowerCase() === currentVal.trim().toLowerCase())
+      ) {
+        list.unshift({
+          id: `current-${currentVal}`,
+          name: currentVal,
+          numericWatts: parseFloat(currentVal.replace(/[^0-9.]/g, '')) || 0,
+          description: 'Current Luminaire Spec',
+          status: 'Active',
+        });
+      }
+      return list;
+    },
+    [dynamicWattageList]
+  );
+
   // Wattage form states
   const [newWattageName, setNewWattageName] = useState('');
   const [newWattageNumeric, setNewWattageNumeric] = useState<number>(12);
@@ -147,6 +168,7 @@ export const MastersPage: React.FC = () => {
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
   const [newCategory, setNewCategory] = useState<string>('Electronics');
+  const [newMatWattage, setNewMatWattage] = useState<string>('N/A');
   const [isCustomCategory, setIsCustomCategory] = useState<boolean>(false);
   const [customCategoryInput, setCustomCategoryInput] = useState<string>('');
   const [newUom, setNewUom] = useState('Pcs');
@@ -215,6 +237,7 @@ export const MastersPage: React.FC = () => {
       const matchesCat = matCatFilter === 'All' || m.category === matCatFilter;
       const matchesWattage =
         matWattageFilter === 'All' ||
+        m.wattage === matWattageFilter ||
         m.code.toLowerCase().includes(matWattageFilter.toLowerCase()) ||
         m.name.toLowerCase().includes(matWattageFilter.toLowerCase()) ||
         products.some(
@@ -303,6 +326,7 @@ export const MastersPage: React.FC = () => {
       code: newCode,
       name: newName,
       category: finalCategory,
+      wattage: newMatWattage && newMatWattage !== 'N/A' ? newMatWattage : undefined,
       uom: newUom,
       supplier: newSupplier || 'Standard Vendor',
       warehouse: newWarehouse,
@@ -321,6 +345,7 @@ export const MastersPage: React.FC = () => {
     setShowAddMatModal(false);
     setNewCode('');
     setNewName('');
+    setNewMatWattage('N/A');
     setIsCustomCategory(false);
     setCustomCategoryInput('');
   };
@@ -437,8 +462,10 @@ export const MastersPage: React.FC = () => {
   // Edit Material state
   const [showEditMatModal, setShowEditMatModal] = useState(false);
   const [editingMatId, setEditingMatId] = useState('');
+  const [editMatCode, setEditMatCode] = useState('');
   const [editMatName, setEditMatName] = useState('');
   const [editMatCategory, setEditMatCategory] = useState<string>('Electronics');
+  const [editMatWattage, setEditMatWattage] = useState<string>('N/A');
   const [isEditCustomCategory, setIsEditCustomCategory] = useState<boolean>(false);
   const [editCustomCategoryInput, setEditCustomCategoryInput] = useState<string>('');
   const [editMatUom, setEditMatUom] = useState('Pcs');
@@ -452,8 +479,10 @@ export const MastersPage: React.FC = () => {
 
   const handleOpenEditMat = (m: Material) => {
     setEditingMatId(m.id);
+    setEditMatCode(m.code);
     setEditMatName(m.name);
     setEditMatCategory(m.category);
+    setEditMatWattage(m.wattage || 'N/A');
     setIsEditCustomCategory(false);
     setEditCustomCategoryInput('');
     setEditMatUom(m.uom);
@@ -478,8 +507,10 @@ export const MastersPage: React.FC = () => {
     }
 
     updateMaterial(editingMatId, {
+      code: editMatCode,
       name: editMatName,
       category: finalCategory,
+      wattage: editMatWattage && editMatWattage !== 'N/A' ? editMatWattage : undefined,
       uom: editMatUom,
       supplier: editMatSupplier,
       warehouse: editMatWarehouse,
@@ -946,9 +977,16 @@ export const MastersPage: React.FC = () => {
                         <td className="py-3 px-3 font-mono font-semibold text-blue-600">{m.code}</td>
                         <td className="py-3 px-3 font-medium text-slate-800 dark:text-slate-200">{m.name}</td>
                         <td className="py-3 px-3">
-                          <Badge variant="secondary" className="text-[10px]">
-                            {m.category}
-                          </Badge>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge variant="secondary" className="text-[10px]">
+                              {m.category}
+                            </Badge>
+                            {m.wattage && (
+                              <Badge variant="outline" className="text-[10px] font-semibold text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/40">
+                                ⚡ {m.wattage}
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-3 text-slate-600 dark:text-slate-400">{m.supplier}</td>
                         <td className="py-3 px-3 text-right text-slate-500">{m.leadTimeDays} days</td>
@@ -1913,9 +1951,9 @@ export const MastersPage: React.FC = () => {
                     <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
                       <SelectValue placeholder="Select Wattage Rating" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {dynamicWattageList.map((w) => (
-                        <SelectItem key={w.name} value={w.name} className="text-xs">
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {getWattageOptionsWithFallback(newProdWattage).map((w) => (
+                        <SelectItem key={w.id || w.name} value={w.name} className="text-xs">
                           {w.name} {w.description ? `• ${w.description}` : ''}
                         </SelectItem>
                       ))}
@@ -2046,15 +2084,15 @@ export const MastersPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleAddMaterial} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1">Material Code</label>
+                  <label className="block font-semibold mb-1">Material Code *</label>
                   <Input
                     required
                     placeholder="e.g. PCB-15W-HP"
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value)}
-                    className="h-9 font-mono"
+                    className="h-9 font-mono font-semibold"
                   />
                 </div>
                 <div>
@@ -2107,6 +2145,27 @@ export const MastersPage: React.FC = () => {
                       </SelectContent>
                     </Select>
                   )}
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold">Wattage Spec</label>
+                    <span className="text-[10px] text-slate-400">Driver / PCB</span>
+                  </div>
+                  <Select value={newMatWattage} onValueChange={setNewMatWattage}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Select Wattage Spec" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-56 overflow-y-auto">
+                      <SelectItem value="N/A" className="text-xs text-slate-500 font-medium">
+                        N/A (Non-wattage part)
+                      </SelectItem>
+                      {dynamicWattageList.map((w) => (
+                        <SelectItem key={w.id || w.name} value={w.name} className="text-xs">
+                          {w.name} {w.description ? `• ${w.description}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -2346,6 +2405,39 @@ export const MastersPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveEditMat} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Material Code *</label>
+                  <Input
+                    required
+                    value={editMatCode}
+                    onChange={(e) => setEditMatCode(e.target.value)}
+                    className="h-9 font-mono font-semibold"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold">Wattage Spec</label>
+                    <span className="text-[10px] text-slate-400">Driver / PCB</span>
+                  </div>
+                  <Select value={editMatWattage} onValueChange={setEditMatWattage}>
+                    <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
+                      <SelectValue placeholder="Select Wattage Spec" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-56 overflow-y-auto">
+                      <SelectItem value="N/A" className="text-xs text-slate-500 font-medium">
+                        N/A (Non-wattage part)
+                      </SelectItem>
+                      {dynamicWattageList.map((w) => (
+                        <SelectItem key={w.id || w.name} value={w.name} className="text-xs">
+                          {w.name} {w.description ? `• ${w.description}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -2624,11 +2716,11 @@ export const MastersPage: React.FC = () => {
                   </div>
                   <Select value={editProdWattage} onValueChange={setEditProdWattage}>
                     <SelectTrigger className="w-full h-9 text-xs font-semibold bg-slate-50 dark:bg-slate-800">
-                      <SelectValue placeholder="Wattage" />
+                      <SelectValue placeholder="Select Wattage Spec" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {dynamicWattageList.map((w) => (
-                        <SelectItem key={w.name} value={w.name} className="text-xs">
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {getWattageOptionsWithFallback(editProdWattage).map((w) => (
+                        <SelectItem key={w.id || w.name} value={w.name} className="text-xs">
                           {w.name} {w.description ? `• ${w.description}` : ''}
                         </SelectItem>
                       ))}

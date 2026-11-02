@@ -28,6 +28,7 @@ export interface Material {
   code: string;
   name: string;
   category: string;
+  wattage?: string;
   subCategory?: string;
   uom: string; // e.g. 'Pcs', 'Meters', 'Sets', 'Kg'
   supplier: string;
@@ -234,6 +235,7 @@ export interface ProductionKit {
   id: string;
   kitNumber: string;
   productId: string;
+  productCode?: string;
   productName: string;
   plannedBatchQty: number;
   assignedEmployee: string;
@@ -571,7 +573,7 @@ interface MipsState {
   updateCustomer: (id: string, updates: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
 
-  createKit: (kit: Omit<ProductionKit, 'id' | 'kitNumber' | 'status' | 'createdDate'>) => void;
+  createKit: (kit: Omit<ProductionKit, 'id' | 'kitNumber' | 'status' | 'createdDate'>) => { success: boolean; error?: string };
   updateKitStatus: (id: string, status: ProductionKit['status'], user: string) => void;
   recordKitProgress: (kitId: string, updates: { materialId: string; consumedQty: number; returnedQty: number; wastageQty: number }[], user: string) => void;
   reconcileAndCloseKit: (kitId: string, notes: string, user: string) => { success: boolean; error?: string };
@@ -1236,6 +1238,25 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
       },
 
       createKit: (kitData) => {
+        // Enforce inventory limit: verify available warehouse stock for every kit item
+        const shortages: string[] = [];
+        for (const item of kitData.items) {
+          const mat = get().materials.find((m) => m.id === item.materialId);
+          const availableStock = mat?.currentStock || 0;
+          if (availableStock < item.totalIssuedQty) {
+            shortages.push(
+              `${item.materialName} (${item.materialCode}): Required ${item.totalIssuedQty}, Available ${availableStock}`
+            );
+          }
+        }
+
+        if (shortages.length > 0) {
+          return {
+            success: false,
+            error: `Insufficient stock to issue kit:\n• ${shortages.join('\n• ')}`
+          };
+        }
+
         const id = `kit-${Date.now()}`;
         const kitNumber = `KIT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
         const activePlant = get().selectedPlant;
@@ -1303,6 +1324,7 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
         }));
 
         mipsService.createKit(kit).catch((err) => console.warn('Failed to sync Kit to MySQL:', err));
+        return { success: true };
       },
 
       updateKitStatus: (id, status, user) => {
