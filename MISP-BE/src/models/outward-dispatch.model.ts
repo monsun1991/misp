@@ -50,5 +50,8 @@ export class OutwardDispatchEntity extends BaseEntityModel {
 
   @Column({ type: "text", nullable: true })
   itemsJson?: string;
+
+  @Column({ type: "varchar", length: 150, nullable: true })
+  dispatchedBy?: string;
 }
 

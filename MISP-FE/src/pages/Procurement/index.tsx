@@ -211,9 +211,9 @@ export const ProcurementPage: React.FC = () => {
     e.preventDefault();
     if (!selectedPO) return;
 
-    const totalReceived = grnAccepted + grnRejected + grnDamaged;
-    const newReceivedQty = selectedPO.receivedQty + grnAccepted;
-    const isFullyReceived = newReceivedQty >= selectedPO.orderedQty;
+    const totalReceived = (Number(grnAccepted) || 0) + (Number(grnRejected) || 0) + (Number(grnDamaged) || 0);
+    const newReceivedQty = (Number(selectedPO.receivedQty) || 0) + (Number(grnAccepted) || 0);
+    const isFullyReceived = newReceivedQty >= (Number(selectedPO.orderedQty) || 0);
 
     createGRN(
       {

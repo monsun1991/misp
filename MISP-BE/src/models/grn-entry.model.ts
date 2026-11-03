@@ -35,5 +35,26 @@ export class GRNEntryEntity extends BaseEntityModel {
 
   @Column({ type: "text", nullable: true })
   itemsJson?: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  materialId?: string;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  materialName?: string;
+
+  @Column({ type: "decimal", precision: 12, scale: 2, default: 0 })
+  receivedQty!: number;
+
+  @Column({ type: "decimal", precision: 12, scale: 2, default: 0 })
+  acceptedQty!: number;
+
+  @Column({ type: "decimal", precision: 12, scale: 2, default: 0 })
+  rejectedQty!: number;
+
+  @Column({ type: "decimal", precision: 12, scale: 2, default: 0 })
+  damagedQty!: number;
+
+  @Column({ type: "varchar", length: 150, nullable: true })
+  warehouse?: string;
 }
 

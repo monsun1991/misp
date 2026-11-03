@@ -32,5 +32,38 @@ export class ProductionLogEntity extends BaseEntityModel {
 
   @Column({ type: "text", nullable: true })
   notes?: string;
+
+  @Column({ type: "varchar", length: 30, nullable: true })
+  entryDate?: string;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  shift?: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  orderNo?: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  productId?: string;
+
+  @Column({ type: "int", default: 0 })
+  targetQty!: number;
+
+  @Column({ type: "int", default: 0 })
+  wastageQty!: number;
+
+  @Column({ type: "varchar", length: 150, nullable: true })
+  supervisor?: string;
+
+  @Column({ type: "decimal", precision: 6, scale: 2, default: 8 })
+  workingHours!: number;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
+  unitsPerHour!: number;
+
+  @Column({ type: "decimal", precision: 8, scale: 1, default: 0 })
+  productivityPct!: number;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  plant?: string;
 }
 

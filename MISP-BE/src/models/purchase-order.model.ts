@@ -44,5 +44,17 @@ export class PurchaseOrderEntity extends BaseEntityModel {
 
   @Column({ type: "date", nullable: true })
   dispatchDate?: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  materialId?: string;
+
+  @Column({ type: "decimal", precision: 12, scale: 2, default: 0 })
+  totalAmount!: number;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  plant?: string;
+
+  @Column({ type: "text", nullable: true })
+  notes?: string;
 }
 

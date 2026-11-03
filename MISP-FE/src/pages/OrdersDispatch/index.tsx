@@ -349,10 +349,10 @@ export const OrdersDispatchPage: React.FC = () => {
 
   // Calculate Metrics
   const totalOpenOrders = customerPOs.filter((p) => p.status !== 'Closed' && p.status !== 'Fully Dispatched').length;
-  const totalDispatchedUnits = customerPOs.reduce((acc, p) => acc + p.totalDispatchedQty, 0);
+  const totalDispatchedUnits = customerPOs.reduce((acc, p) => acc + (Number(p.totalDispatchedQty) || 0), 0);
   const totalOpenOrderValue = customerPOs
     .filter((p) => p.status !== 'Closed')
-    .reduce((acc, p) => acc + p.totalAmount, 0);
+    .reduce((acc, p) => acc + (Number(p.totalAmount) || 0), 0);
   const partialDispatchedCount = customerPOs.filter((p) => p.status === 'Partially Dispatched').length;
 
   const handleAddLineItem = () => {

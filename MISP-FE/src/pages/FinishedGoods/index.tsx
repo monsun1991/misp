@@ -51,6 +51,7 @@ export const FinishedGoodsPage: React.FC = () => {
     employees,
     selectedPlant,
     wattages,
+    plants,
     inwardToFinishedGoods,
     adjustFinishedGoodsStock,
     updateFinishedGoodStatus
@@ -122,11 +123,11 @@ export const FinishedGoodsPage: React.FC = () => {
   const [adjUser, setAdjUser] = useState<string>('Ramesh Sharma (Store Manager)');
 
   // Calculation of KPIs
-  const totalUnits = finishedGoods.reduce((sum, item) => sum + item.quantityOnHand, 0);
-  const totalValuation = finishedGoods.reduce((sum, item) => sum + item.quantityOnHand * (item.sellingPrice || item.standardCost * 1.35), 0);
-  const readyUnits = finishedGoods.filter((i) => i.status === 'Ready for Dispatch').reduce((sum, i) => sum + i.availableQty, 0);
-  const allocatedUnits = finishedGoods.reduce((sum, item) => sum + (item.allocatedQty || 0), 0);
-  const quarantinedUnits = finishedGoods.filter((i) => i.status === 'Quarantine' || i.status === 'Under QC').reduce((sum, i) => sum + i.quantityOnHand, 0);
+  const totalUnits = finishedGoods.reduce((sum, item) => sum + (Number(item.quantityOnHand) || 0), 0);
+  const totalValuation = finishedGoods.reduce((sum, item) => sum + ((Number(item.quantityOnHand) || 0) * (Number(item.sellingPrice) || (Number(item.standardCost) * 1.35) || 0)), 0);
+  const readyUnits = finishedGoods.filter((i) => i.status === 'Ready for Dispatch').reduce((sum, i) => sum + (Number(i.availableQty) || 0), 0);
+  const allocatedUnits = finishedGoods.reduce((sum, item) => sum + (Number(item.allocatedQty) || 0), 0);
+  const quarantinedUnits = finishedGoods.filter((i) => i.status === 'Quarantine' || i.status === 'Under QC').reduce((sum, i) => sum + (Number(i.quantityOnHand) || 0), 0);
 
   // Filtered List
   const filteredItems = React.useMemo(() => {

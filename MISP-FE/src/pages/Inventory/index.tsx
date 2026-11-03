@@ -1528,7 +1528,7 @@ export const InventoryPage: React.FC = () => {
                       <span className={movementDirection === 'IN' ? 'text-emerald-600 font-extrabold' : 'text-red-500 font-extrabold'}>
                         {movementDirection === 'IN' ? `+ ${adjQuantity}` : `- ${adjQuantity}`}
                       </span>{' '}
-                      = {movementDirection === 'IN' ? currentMaterial.currentStock + adjQuantity : currentMaterial.currentStock - adjQuantity} {currentMaterial.uom}
+                      = {movementDirection === 'IN' ? (Number(currentMaterial.currentStock) || 0) + adjQuantity : (Number(currentMaterial.currentStock) || 0) - adjQuantity} {currentMaterial.uom}
                     </div>
                   </div>
 

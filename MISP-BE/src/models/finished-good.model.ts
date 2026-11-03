@@ -47,5 +47,26 @@ export class FinishedGoodEntity extends BaseEntityModel {
 
   @Column({ type: "varchar", length: 100, default: "Plant 1 - Pune" })
   plant!: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  productId?: string;
+
+  @Column({ type: "int", default: 0 })
+  rejectionsQty!: number;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  kitId?: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  kitNumber?: string;
+
+  @Column({ type: "decimal", precision: 12, scale: 2, default: 0 })
+  standardCost!: number;
+
+  @Column({ type: "decimal", precision: 12, scale: 2, default: 0 })
+  sellingPrice!: number;
+
+  @Column({ type: "text", nullable: true })
+  notes?: string;
 }
 

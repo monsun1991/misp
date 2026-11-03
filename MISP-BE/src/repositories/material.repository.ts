@@ -3,6 +3,7 @@ import { MaterialEntity } from "../models/material.model";
 import { StockLedgerEntity } from "../models/stock-ledger.model";
 import { WarehouseEntity } from "../models/warehouse.model";
 import { NotFoundException } from "../utils/error.util";
+import { dateTimeLabel, withSafeId } from "../utils/mapper.util";
 
 const getMaterialRepo = () => AppDataSource.getRepository(MaterialEntity);
 const getStockLedgerRepo = () => AppDataSource.getRepository(StockLedgerEntity);
@@ -37,15 +38,51 @@ export const deleteMaterial = async (id: string): Promise<void> => {
   await repo.delete(id);
 };
 
-// Stock Ledgers
-export const getAllStockLedgers = async (): Promise<StockLedgerEntity[]> => {
-  return await getStockLedgerRepo().find({ order: { createdAt: "DESC" } });
+// Stock Ledgers: the frontend uses inQty / outQty / balanceQty / referenceNo / notes / user,
+// the table stores a signed quantity (negative = out) / balanceAfter / referenceNumber / remarks / employeeName.
+const toStockLedgerEntity = (data: any): Partial<StockLedgerEntity> => {
+  const { id, inQty, outQty, balanceQty, referenceNo, notes, user, date, ...rest } = data;
+  const entity: any = withSafeId({ ...rest }, id);
+  if (inQty !== undefined || outQty !== undefined) {
+    entity.quantity = (Number(inQty) || 0) - (Number(outQty) || 0);
+  }
+  if (balanceQty !== undefined) entity.balanceAfter = Number(balanceQty) || 0;
+  if (referenceNo !== undefined) entity.referenceNumber = referenceNo;
+  if (notes !== undefined) entity.remarks = notes;
+  if (user !== undefined) entity.employeeName = user;
+  return entity;
 };
 
-export const createStockLedger = async (data: Partial<StockLedgerEntity>): Promise<StockLedgerEntity> => {
+const toStockLedgerDto = (entry: StockLedgerEntity) => {
+  const quantity = Number(entry.quantity) || 0;
+  return {
+    ...entry,
+    date: dateTimeLabel(entry.createdAt),
+    inQty: quantity > 0 ? quantity : 0,
+    outQty: quantity < 0 ? Math.abs(quantity) : 0,
+    balanceQty: Number(entry.balanceAfter) || 0,
+    referenceNo: entry.referenceNumber || "",
+    notes: entry.remarks,
+    user: entry.employeeName || "",
+    warehouse: entry.warehouse || "",
+    unitCost: entry.unitCost != null ? Number(entry.unitCost) : undefined,
+  };
+};
+
+export const getAllStockLedgers = async (): Promise<any[]> => {
+  const entries = await getStockLedgerRepo().find({ order: { createdAt: "DESC" } });
+  return entries.map(toStockLedgerDto);
+};
+
+export const createStockLedger = async (data: any): Promise<any> => {
   const repo = getStockLedgerRepo();
-  const entry = repo.create(data);
-  return await repo.save(entry);
+  const entity = toStockLedgerEntity(data);
+  const entry = repo.create({
+    ...entity,
+    quantity: entity.quantity ?? 0,
+    balanceAfter: entity.balanceAfter ?? 0,
+  });
+  return toStockLedgerDto(await repo.save(entry));
 };
 
 // Warehouses

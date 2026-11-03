@@ -82,10 +82,10 @@ export const ProductivityPage: React.FC = () => {
       };
     }
     const stat = workerStats[log.operator];
-    stat.totalTarget += log.targetQty;
-    stat.totalActual += log.actualQty;
-    stat.totalRejects += log.rejectedQty;
-    stat.totalHours += log.workingHours;
+    stat.totalTarget += Number(log.targetQty) || 0;
+    stat.totalActual += Number(log.actualQty) || 0;
+    stat.totalRejects += Number(log.rejectedQty) || 0;
+    stat.totalHours += Number(log.workingHours) || 0;
     stat.entriesCount += 1;
   });
 

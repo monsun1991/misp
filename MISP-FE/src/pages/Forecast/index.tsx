@@ -100,10 +100,14 @@ export const ForecastPage: React.FC = () => {
           if (endDate && delivDate && delivDate > endDate) return false;
           return true;
         })
-        .reduce((acc, p) => acc + p.pendingQty, 0);
+        .reduce((acc, p) => acc + (Number(p.pendingQty) || 0), 0);
+
+      const currentStockNum = Number(mat.currentStock) || 0;
+      const safetyStockNum = Number(mat.safetyStock) || 0;
+      const maxStockNum = Number(mat.maxStock) || 0;
 
       // Projected availability formula: current stock + expected incoming stock
-      const projectedAvailability = mat.currentStock + incomingStock;
+      const projectedAvailability = currentStockNum + incomingStock;
 
       // 4 Month projected balances
       const m1Projected = projectedAvailability - monthlyRequirement;
@@ -115,14 +119,14 @@ export const ForecastPage: React.FC = () => {
       const total4MonthRequirement = monthlyRequirement * 4;
 
       // BRD Formula: Future requirement + safety stock - current stock - expected incoming stock
-      const netDeficit = (total4MonthRequirement + mat.safetyStock) - projectedAvailability;
+      const netDeficit = (total4MonthRequirement + safetyStockNum) - projectedAvailability;
       const recommendedPurchaseQty = Math.max(0, netDeficit);
 
       const getStatus = (balance: number) => {
-        if (balance < mat.safetyStock) {
+        if (balance < safetyStockNum) {
           return { label: 'Shortage', color: 'bg-red-50 text-red-700 border-red-200' };
         }
-        if (balance > mat.maxStock) {
+        if (balance > maxStockNum) {
           return { label: 'Excess', color: 'bg-amber-50 text-amber-700 border-amber-200' };
         }
         return { label: 'Healthy', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };

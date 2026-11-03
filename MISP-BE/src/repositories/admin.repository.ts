@@ -4,15 +4,30 @@ import { DepartmentEntity } from "../models/department.model";
 import { PlantEntity } from "../models/plant.model";
 import { AuditLogEntity } from "../models/audit-log.model";
 import { NotFoundException } from "../utils/error.util";
+import { parseJsonArray } from "../utils/mapper.util";
 
 const getRoleRepo = () => AppDataSource.getRepository(RoleEntity);
 const getDeptRepo = () => AppDataSource.getRepository(DepartmentEntity);
 const getPlantRepo = () => AppDataSource.getRepository(PlantEntity);
 const getAuditRepo = () => AppDataSource.getRepository(AuditLogEntity);
 
-// Roles
-export const getAllRoles = async (): Promise<RoleEntity[]> => {
-  return await getRoleRepo().find({ order: { createdAt: "DESC" } });
+// Roles: permissions live in the permissionsJson text column.
+const toRoleEntity = (data: any): Partial<RoleEntity> => {
+  const { permissions, ...rest } = data;
+  const entity: any = { ...rest };
+  if (Array.isArray(permissions)) entity.permissionsJson = JSON.stringify(permissions);
+  return entity;
+};
+
+const toRoleDto = (role: RoleEntity) => ({
+  ...role,
+  description: role.description || "",
+  permissions: parseJsonArray(role.permissionsJson),
+});
+
+export const getAllRoles = async (): Promise<any[]> => {
+  const roles = await getRoleRepo().find({ order: { createdAt: "DESC" } });
+  return roles.map(toRoleDto);
 };
 
 export const getRoleById = async (id: string): Promise<RoleEntity> => {
@@ -21,17 +36,17 @@ export const getRoleById = async (id: string): Promise<RoleEntity> => {
   return role;
 };
 
-export const createRole = async (data: Partial<RoleEntity>): Promise<RoleEntity> => {
+export const createRole = async (data: any): Promise<any> => {
   const repo = getRoleRepo();
-  const role = repo.create(data);
-  return await repo.save(role);
+  const role = repo.create(toRoleEntity(data));
+  return toRoleDto(await repo.save(role));
 };
 
-export const updateRole = async (id: string, data: Partial<RoleEntity>): Promise<RoleEntity> => {
+export const updateRole = async (id: string, data: any): Promise<any> => {
   const repo = getRoleRepo();
   const role = await getRoleById(id);
-  Object.assign(role, data);
-  return await repo.save(role);
+  Object.assign(role, toRoleEntity(data));
+  return toRoleDto(await repo.save(role));
 };
 
 export const deleteRole = async (id: string): Promise<void> => {

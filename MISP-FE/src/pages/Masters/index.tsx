@@ -429,7 +429,7 @@ export const MastersPage: React.FC = () => {
     // Recalculate standard cost from BOM
     const computedCost = editingBOM.reduce((acc, item) => {
       const mat = materials.find((m) => m.id === item.materialId);
-      return acc + (mat ? mat.standardCost * item.qtyPerUnit : 0);
+      return acc + (mat ? (Number(mat.standardCost) || 0) * (Number(item.qtyPerUnit) || 0) : 0);
     }, 0);
 
     const roundedCost = Number(computedCost.toFixed(2));
@@ -1588,8 +1588,8 @@ export const MastersPage: React.FC = () => {
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {editingBOM.map((item, idx) => {
                       const mat = materials.find((m) => m.id === item.materialId);
-                      const unitCost = mat?.standardCost || 0;
-                      const lineCost = unitCost * item.qtyPerUnit;
+                      const unitCost = Number(mat?.standardCost || 0);
+                      const lineCost = unitCost * (Number(item.qtyPerUnit) || 0);
 
                       return (
                         <tr key={item.materialId} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">

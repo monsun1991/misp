@@ -32,5 +32,23 @@ export class KitEntity extends BaseEntityModel {
 
   @Column({ type: "text", nullable: true })
   reconciliationJson?: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  productId?: string;
+
+  @Column({ type: "varchar", length: 150, nullable: true })
+  department?: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  plant?: string;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  issueDate?: string;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  closedDate?: string;
+
+  @Column({ type: "text", nullable: true })
+  reconciliationNotes?: string;
 }
 
