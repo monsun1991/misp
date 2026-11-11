@@ -15,6 +15,11 @@ export const loginAPI = async (data: { email?: string; identifier?: string; pass
     return response.data;
 };
 
+export const getProfileAPI = async (): Promise<any> => {
+    const response = await api.get(API_ENDPOINTS.user.getProfile);
+    return response.data;
+};
+
 export const logoutAPI = async (_accessToken: string): Promise<any> => {
     return { success: true };
 };

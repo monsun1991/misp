@@ -5,6 +5,8 @@ import PermissionGuard from './components/common/PermissionGuard';
 import Layout from './layouts/Layout';
 import { Loader2 } from 'lucide-react';
 import { useMipsStore } from './store/useMipsStore';
+import { useUserStore } from './store/useAuthStore';
+import { getProfileAPI } from './api/services/user.service';
 
 const LandingPage = lazy(() => import('./pages/Landing'));
 const LoginPage = lazy(() => import('./pages/Login'));
@@ -34,9 +36,23 @@ const FullScreenSpinner = () => (
 export function App() {
   const initData = useMipsStore((s) => s.initData);
 
+  const accessToken = useUserStore((s: any) => s.accessToken);
+
   useEffect(() => {
     initData();
   }, [initData]);
+
+  // Permissions are cached at login; re-fetch them so role changes made in Settings apply on the next page load
+  useEffect(() => {
+    if (!accessToken) return;
+    getProfileAPI()
+      .then((res) => {
+        const { user, permissions } = res?.data || {};
+        if (Array.isArray(permissions)) useUserStore.getState().setPermissions(permissions);
+        if (user) useUserStore.getState().updateUser(user);
+      })
+      .catch((err) => console.warn('Failed to refresh permissions from profile:', err));
+  }, [accessToken]);
 
   return (
     <Suspense fallback={<FullScreenSpinner />}>

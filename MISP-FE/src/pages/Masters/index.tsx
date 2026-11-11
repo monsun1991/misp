@@ -49,6 +49,15 @@ interface WarehouseItem {
   manager?: string;
 }
 
+// Combination ratings like "12W+4W" are labels, not sums: never concatenate or add their digits
+const isCombinedWattage = (label?: string) => /\d\s*W?\s*[+&/]\s*\d/i.test(label || '');
+const parseWattageNumber = (label?: string): number => {
+  const match = (label || '').match(/\d+(\.\d+)?/);
+  return match ? parseFloat(match[0]) : NaN;
+};
+const wattageSortValue = (w: MasterWattage) =>
+  isCombinedWattage(w.name) ? parseWattageNumber(w.name) || 0 : Number(w.numericWatts) || 0;
+
 export const MastersPage: React.FC = () => {
   const {
     materials,
@@ -93,7 +102,7 @@ export const MastersPage: React.FC = () => {
   // Dynamic Wattages from Master Table & Fallbacks
   const dynamicWattageList: MasterWattage[] = React.useMemo(() => {
     if (wattages && wattages.length > 0) {
-      return [...wattages].sort((a, b) => (Number(a.numericWatts) || 0) - (Number(b.numericWatts) || 0));
+      return [...wattages].sort((a, b) => wattageSortValue(a) - wattageSortValue(b));
     }
     const defaults: MasterWattage[] = [
       { id: 'w-3', name: '3W', numericWatts: 3, description: 'Compact / Night / Indicator Luminaire', status: 'Active' },
@@ -126,7 +135,7 @@ export const MastersPage: React.FC = () => {
         list.unshift({
           id: `current-${currentVal}`,
           name: currentVal,
-          numericWatts: parseFloat(currentVal.replace(/[^0-9.]/g, '')) || 0,
+          numericWatts: parseWattageNumber(currentVal) || 0,
           description: 'Current Luminaire Spec',
           status: 'Active',
         });
@@ -719,7 +728,7 @@ export const MastersPage: React.FC = () => {
     const formattedName = newWattageName.trim().toUpperCase().endsWith('W')
       ? newWattageName.trim().toUpperCase()
       : `${newWattageName.trim()}W`;
-    const numWatts = newWattageNumeric || parseFloat(formattedName.replace(/[^0-9.]/g, '')) || 0;
+    const numWatts = newWattageNumeric || parseWattageNumber(formattedName) || 0;
     await addWattage({
       name: formattedName,
       numericWatts: numWatts,
@@ -738,7 +747,7 @@ export const MastersPage: React.FC = () => {
     const formattedName = editWattageName.trim().toUpperCase().endsWith('W')
       ? editWattageName.trim().toUpperCase()
       : `${editWattageName.trim()}W`;
-    const numWatts = editWattageNumeric || parseFloat(formattedName.replace(/[^0-9.]/g, '')) || 0;
+    const numWatts = editWattageNumeric || parseWattageNumber(formattedName) || 0;
     await updateWattage(editingWattageId, {
       name: formattedName,
       numericWatts: numWatts,
@@ -1227,9 +1236,11 @@ export const MastersPage: React.FC = () => {
                           <Badge className="bg-[#183638] text-[#84cc16] font-bold text-xs border border-[#84cc16]/30">
                             {w.name}
                           </Badge>
-                          <span className="font-semibold text-slate-500 text-[11px]">
-                            {w.numericWatts}W Nominal
-                          </span>
+                          {!isCombinedWattage(w.name) && (
+                            <span className="font-semibold text-slate-500 text-[11px]">
+                              {w.numericWatts}W Nominal
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1">
                           <Badge variant="outline" className={w.status === 'Active' ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20' : 'text-slate-400'}>
@@ -1304,7 +1315,7 @@ export const MastersPage: React.FC = () => {
                   value={newWattageName}
                   onChange={(e) => {
                     setNewWattageName(e.target.value);
-                    const parsed = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
+                    const parsed = parseWattageNumber(e.target.value);
                     if (!isNaN(parsed)) setNewWattageNumeric(parsed);
                   }}
                   className="h-9 font-bold"
@@ -1387,7 +1398,7 @@ export const MastersPage: React.FC = () => {
                   value={editWattageName}
                   onChange={(e) => {
                     setEditWattageName(e.target.value);
-                    const parsed = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
+                    const parsed = parseWattageNumber(e.target.value);
                     if (!isNaN(parsed)) setEditWattageNumeric(parsed);
                   }}
                   className="h-9 font-bold"

@@ -18,8 +18,19 @@ export const getUserById = async (id: string): Promise<User> => {
   return user;
 };
 
-export const createUser = async (data: Partial<User>): Promise<User> => {
+// The frontend sends UBAC overrides as arrays; the table stores them as JSON text
+const toUserEntity = (data: any): Partial<User> => {
+  const { customPermissions, revokedPermissions, ...rest } = data;
+  const entity: any = { ...rest };
+  if (Array.isArray(customPermissions)) entity.customPermissionsJson = JSON.stringify(customPermissions);
+  if (Array.isArray(revokedPermissions)) entity.revokedPermissionsJson = JSON.stringify(revokedPermissions);
+  if (Array.isArray(entity.skills)) entity.skills = entity.skills.join(", ");
+  return entity;
+};
+
+export const createUser = async (input: Partial<User>): Promise<User> => {
   const repo = getUserRepo();
+  const data = toUserEntity(input);
   if (data.email) {
     const existing = await repo.findOne({ where: { email: data.email.toLowerCase() } });
     if (existing) throw new ConflictException(`User with email ${data.email} already exists`);
@@ -38,8 +49,9 @@ export const createUser = async (data: Partial<User>): Promise<User> => {
   return await repo.save(user);
 };
 
-export const updateUser = async (id: string, data: Partial<User>): Promise<User> => {
+export const updateUser = async (id: string, input: Partial<User>): Promise<User> => {
   const repo = getUserRepo();
+  const data = toUserEntity(input);
   const user = await getUserById(id);
 
   if (data.password) {

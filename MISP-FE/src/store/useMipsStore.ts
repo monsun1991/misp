@@ -425,7 +425,9 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { id: 'inventory.view', label: 'View Stock Balances & Locations', category: 'Inventory' },
   { id: 'inventory.adjust', label: 'Authorized Stock Adjustments (+/-)', category: 'Inventory' },
   { id: 'inventory.transfer', label: 'Inter-Warehouse Stock Transfer', category: 'Inventory' },
+  { id: 'finished_goods.view', label: 'View Finished Goods Store', category: 'Inventory' },
   
+  { id: 'procurement.view', label: 'View Purchase Orders & GRNs', category: 'Procurement' },
   { id: 'procurement.po.create', label: 'Create Purchase Orders (PO)', category: 'Procurement' },
   { id: 'procurement.po.approve', label: 'Approve & Dispatch POs', category: 'Procurement' },
   { id: 'procurement.grn.receive', label: 'Inbound GRN Quality Inspection', category: 'Procurement' },
@@ -433,17 +435,25 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { id: 'forecast.view', label: 'View 4-Month Forecast Matrix', category: 'Planning' },
   { id: 'forecast.plan', label: 'Adjust Production Run Demands', category: 'Planning' },
   
+  { id: 'kits.view', label: 'View Production Kits', category: 'Kits & Floor' },
   { id: 'kits.create', label: 'Create Production Kits from BOM', category: 'Kits & Floor' },
   { id: 'kits.issue', label: 'Issue Material Kits to Operators', category: 'Kits & Floor' },
   { id: 'kits.reconcile', label: 'Log Consumption, Returns & Scrap', category: 'Kits & Floor' },
   { id: 'kits.close', label: 'Supervisor Reconciliation & Kit Closure', category: 'Kits & Floor' },
   
+  { id: 'production.view', label: 'View Production Logs', category: 'Production' },
+  { id: 'production.plan', label: 'Plan Production Runs', category: 'Production' },
   { id: 'production.log', label: 'Log Daily Shift Output & Units/Hour', category: 'Production' },
   { id: 'production.scrap', label: 'Record QA Rejections & Wastage', category: 'Production' },
+  { id: 'productivity.view', label: 'View Productivity Dashboard', category: 'Production' },
+
+  { id: 'orders.view', label: 'View Customer POs & Dispatches', category: 'Orders & Dispatch' },
+  { id: 'orders.manage', label: 'Record Customer POs & Dispatch Goods', category: 'Orders & Dispatch' },
   
   { id: 'masters.manage', label: 'Manage Materials, Products & BOMs', category: 'Master Data' },
   { id: 'settings.manage', label: 'Manage Roles, Departments & Scopes', category: 'Administration' },
   { id: 'users.manage', label: 'Onboard & Manage Workforce Directory', category: 'Administration' },
+  { id: 'reports.view', label: 'View Audit Trail & Export Reports', category: 'Administration' },
 ];
 
 /**

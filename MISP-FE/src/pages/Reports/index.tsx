@@ -11,6 +11,7 @@ import {
   Boxes,
   Truck
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useMipsStore } from '@/store/useMipsStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,7 +76,71 @@ export const ReportsPage: React.FC = () => {
   }, [searchTerm, moduleFilter, startDate, endDate]);
 
   const exportCSV = (type: string) => {
-    alert(`Exporting ${type} report to CSV...`);
+    const reports: Record<string, { headers: string[]; rows: unknown[][] }> = {
+      'Audit Logs': {
+        headers: ['Timestamp', 'User', 'Module', 'Action', 'Details'],
+        rows: filteredAuditLogs.map((l) => [l.timestamp, l.user, l.module, l.action, l.details]),
+      },
+      'Stock Valuation': {
+        headers: ['Code', 'Name', 'Category', 'Wattage', 'UOM', 'Plant', 'Warehouse', 'Current Stock', 'With Employees', 'Reorder Level', 'Safety Stock', 'Standard Cost (INR)', 'Stock Value (INR)', 'Supplier', 'Status'],
+        rows: materials.map((m) => {
+          const stock = Number(m.currentStock) || 0;
+          const cost = Number(m.standardCost) || 0;
+          return [m.code, m.name, m.category, m.wattage, m.uom, m.plant, m.warehouse, stock, Number(m.stockWithEmployees) || 0, Number(m.reorderLevel) || 0, Number(m.safetyStock) || 0, cost, (stock * cost).toFixed(2), m.supplier, m.status];
+        }),
+      },
+      Procurement: {
+        headers: ['PO Number', 'PO Date', 'Supplier', 'Material', 'Ordered Qty', 'Received Qty', 'Pending Qty', 'Unit Rate (INR)', 'Total Amount (INR)', 'Expected Delivery', 'Status', 'Plant'],
+        rows: purchaseOrders.map((po) => {
+          const rate = Number(po.unitRate ?? po.unitPrice) || 0;
+          const ordered = Number(po.orderedQty) || 0;
+          return [po.poNumber, po.poDate, po.supplier, po.materialName, ordered, Number(po.receivedQty) || 0, Number(po.pendingQty) || 0, rate, Number(po.totalAmount) || ordered * rate, po.expectedDeliveryDate, po.status, po.plant];
+        }),
+      },
+      'Kit Reconciliation': {
+        headers: ['Kit Number', 'Created', 'Product', 'Planned Qty', 'Employee', 'Supervisor', 'Status', 'Material Code', 'Material', 'Issued', 'Consumed', 'Returned', 'Wastage', 'Balance With Employee', 'Closed', 'Reconciliation Notes'],
+        // One row per kit line so issue/consumption is accountable per material
+        rows: kits.flatMap((k) => {
+          const items = Array.isArray(k.items) && k.items.length > 0 ? k.items : [null];
+          return items.map((item) => [
+            k.kitNumber, k.createdDate, k.productName, Number(k.plannedBatchQty) || 0, k.assignedEmployee, k.supervisor, k.status,
+            item?.materialCode, item?.materialName, Number(item?.totalIssuedQty) || 0, Number(item?.consumedQty) || 0,
+            Number(item?.returnedQty) || 0, Number(item?.wastageQty) || 0, Number(item?.balanceWithEmployee) || 0,
+            k.closedDate, k.reconciliationNotes,
+          ]);
+        }),
+      },
+      'Production Yield': {
+        headers: ['Date', 'Shift', 'Order No', 'Product', 'Kit Number', 'Operator', 'Supervisor', 'Target Qty', 'Actual Qty', 'Rejected Qty', 'Wastage Qty', 'Working Hours', 'Units/Hour', 'Productivity %', 'Plant'],
+        rows: productionLogs.map((pl) => [pl.date, pl.shift, pl.orderNo, pl.productName, pl.kitNumber, pl.operator, pl.supervisor, Number(pl.targetQty) || 0, Number(pl.actualQty) || 0, Number(pl.rejectedQty) || 0, Number(pl.wastageQty) || 0, Number(pl.workingHours) || 0, Number(pl.unitsPerHour) || 0, Number(pl.productivityPct) || 0, pl.plant]),
+      },
+    };
+
+    const report = reports[type];
+    if (!report) return;
+    if (report.rows.length === 0) {
+      toast.info(`No ${type} records to export.`);
+      return;
+    }
+
+    const escapeCell = (value: unknown) => {
+      let text = value === undefined || value === null ? '' : String(value);
+      // Stop spreadsheet apps from executing user-entered text as a formula
+      if (typeof value === 'string' && /^[=+\-@]/.test(text)) text = `'${text}`;
+      return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const csv = [report.headers, ...report.rows].map((row) => row.map(escapeCell).join(',')).join('\r\n');
+
+    // BOM so Excel reads UTF-8 (₹, names) correctly
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `MIPS_${type.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (

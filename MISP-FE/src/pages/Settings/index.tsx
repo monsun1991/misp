@@ -24,7 +24,7 @@ import {
   FileText,
   Users
 } from 'lucide-react';
-import { useMipsStore } from '@/store/useMipsStore';
+import { useMipsStore, AVAILABLE_PERMISSIONS } from '@/store/useMipsStore';
 import type { Role, Department, PlantLocation } from '@/store/useMipsStore';
 import { mipsService } from '@/api/services/mips.service';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -38,31 +38,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-const AVAILABLE_PERMISSIONS = [
-  { id: 'inventory.view', label: 'View Stock Balances & Locations', category: 'Inventory' },
-  { id: 'inventory.adjust', label: 'Authorized Stock Adjustments (+/-)', category: 'Inventory' },
-  { id: 'inventory.transfer', label: 'Inter-Warehouse Stock Transfer', category: 'Inventory' },
-  
-  { id: 'procurement.po.create', label: 'Create Purchase Orders (PO)', category: 'Procurement' },
-  { id: 'procurement.po.approve', label: 'Approve & Dispatch POs', category: 'Procurement' },
-  { id: 'procurement.grn.receive', label: 'Inbound GRN Quality Inspection', category: 'Procurement' },
-  
-  { id: 'forecast.view', label: 'View 4-Month Forecast Matrix', category: 'Planning' },
-  { id: 'forecast.plan', label: 'Adjust Production Run Demands', category: 'Planning' },
-  
-  { id: 'kits.create', label: 'Create Production Kits from BOM', category: 'Kits & Floor' },
-  { id: 'kits.issue', label: 'Issue Material Kits to Operators', category: 'Kits & Floor' },
-  { id: 'kits.reconcile', label: 'Log Consumption, Returns & Scrap', category: 'Kits & Floor' },
-  { id: 'kits.close', label: 'Supervisor Reconciliation & Kit Closure', category: 'Kits & Floor' },
-  
-  { id: 'production.log', label: 'Log Daily Shift Output & Units/Hour', category: 'Production' },
-  { id: 'production.scrap', label: 'Record QA Rejections & Wastage', category: 'Production' },
-  
-  { id: 'masters.manage', label: 'Manage Materials, Products & BOMs', category: 'Master Data' },
-  { id: 'settings.manage', label: 'Manage Roles, Departments & Scopes', category: 'Administration' },
-  { id: 'users.manage', label: 'Onboard & Manage Workforce Directory', category: 'Administration' },
-];
 
 export const SettingsPage: React.FC = () => {
   const {

@@ -12,7 +12,7 @@ export class AuthController {
   public async login(payload: ILogin): Promise<IResponseDto<any>> {
     const result = await loginUser(payload);
     const userProfile = formatUserProfile(result.user);
-    const permissions = computeUserPermissions(result.user);
+    const permissions = await computeUserPermissions(result.user);
 
     return new ApiResponse(
       true,
@@ -28,7 +28,7 @@ export class AuthController {
   public async getProfile(): Promise<IResponseDto<any>> {
     const user = await getUserProfile(this.req.user!.id);
     const userProfile = formatUserProfile(user);
-    const permissions = computeUserPermissions(user);
+    const permissions = await computeUserPermissions(user);
 
     return new ApiResponse(
       true,

@@ -1,4 +1,6 @@
+import { AppDataSource } from "../config/data-source";
 import { User } from "../models";
+import { RoleEntity } from "../models/role.model";
 
 export const ROLE_PERMISSIONS_MAP: Record<string, string[]> = {
   // SuperAdmin: Has full administrative and operational permissions
@@ -132,33 +134,43 @@ export const ROLE_PERMISSIONS_MAP: Record<string, string[]> = {
   ]
 };
 
-export function computeUserPermissions(user: User): string[] {
+const parseJsonList = (raw?: string | null): string[] => {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+// Same normalisation the frontend uses in getEffectivePermissions ("Store Manager" == "store-manager")
+const normaliseRoleName = (name?: string) => (name || "").toLowerCase().replace(/[\s/_-]+/g, "");
+
+/**
+ * Permissions come from the role configured in Settings (roles.permissionsJson), so what an admin
+ * ticks there is what the user actually gets. The hardcoded map is only a fallback for built-in
+ * role names that have no saved permissions yet. UBAC grants/revocations are applied on top.
+ */
+export async function computeUserPermissions(user: User): Promise<string[]> {
   const normRole = (user.role || '').toLowerCase().trim();
-  
+
   // Super admin always has all available permissions
   if (normRole === 'superadmin' || normRole === 'super admin') {
     return ROLE_PERMISSIONS_MAP['superadmin'];
   }
 
-  const basePermissions = ROLE_PERMISSIONS_MAP[normRole] || [];
-  
-  let custom: string[] = [];
-  if (user.customPermissionsJson) {
-    try {
-      custom = JSON.parse(user.customPermissionsJson);
-    } catch {
-      custom = [];
-    }
-  }
-  
-  let revoked: string[] = [];
-  if (user.revokedPermissionsJson) {
-    try {
-      revoked = JSON.parse(user.revokedPermissionsJson);
-    } catch {
-      revoked = [];
-    }
-  }
+  const roles = await AppDataSource.getRepository(RoleEntity).find();
+  const roleRow = roles.find((r) => normaliseRoleName(r.name) === normaliseRoleName(user.role));
+
+  // A saved list (even an empty one) is authoritative; null means the role was never configured
+  const basePermissions =
+    roleRow && roleRow.permissionsJson != null
+      ? parseJsonList(roleRow.permissionsJson)
+      : ROLE_PERMISSIONS_MAP[normRole] || [];
+
+  const custom = parseJsonList(user.customPermissionsJson);
+  const revoked = parseJsonList(user.revokedPermissionsJson);
 
   const combined = Array.from(new Set([...basePermissions, ...custom]));
   return combined.filter(p => !revoked.includes(p));
