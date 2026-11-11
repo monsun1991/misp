@@ -24,6 +24,7 @@ export const useAuth = () => {
                     isExternal
                 );
                 store.setProfileImage(data.data.user.profilePicture);
+                store.setMustChangePin(!!data.data.mustChangePin);
                 
                 // UBAC: Scope active plant facility to user assigned scope
                 if (data.data.user?.plant) {
@@ -53,6 +54,7 @@ export const useAuth = () => {
                 if (data.data?.user) {
                     store.updateUser(data.data.user);
                 }
+                store.setMustChangePin(false);
                 toast.success("PIN changed successfully!");
             }
         },

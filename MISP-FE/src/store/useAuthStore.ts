@@ -16,6 +16,7 @@ export const useUserStore = create<any>()(
       profileImage: null,
       error: null,
       isExternal: false,
+      mustChangePin: false,
 
       // Actions
       setAuth: (accessToken: string, refreshToken: string, user: any, owners: any, permissions: string[] = [], isExternal: boolean = false) => {
@@ -35,6 +36,10 @@ export const useUserStore = create<any>()(
         set({ permissions });
       },
 
+      setMustChangePin: (mustChangePin: boolean) => {
+        set({ mustChangePin });
+      },
+
       setPermissionsLoaded: (permissionsLoaded: boolean) => {
         set({ permissionsLoaded });
       },
@@ -50,6 +55,7 @@ export const useUserStore = create<any>()(
           permissionsLoaded: false,
           profileImage: null,
           isExternal: false,
+          mustChangePin: false,
         });
         useNotificationStore.getState().setCount(0);
 
@@ -96,6 +102,7 @@ export const useUserStore = create<any>()(
         permissionsLoaded: state.permissionsLoaded,
         profileImage: state.profileImage,
         isExternal: state.isExternal,
+        mustChangePin: state.mustChangePin,
       }),
     }
   )

@@ -20,6 +20,7 @@ export class AuthController {
         user: userProfile,
         permissions,
         token: result.token,
+        mustChangePin: result.mustChangePin,
       },
       AUTH_MESSAGE.LOGIN_SUCCESS
     );

@@ -426,6 +426,7 @@ export const AVAILABLE_PERMISSIONS: PermissionDefinition[] = [
   { id: 'inventory.adjust', label: 'Authorized Stock Adjustments (+/-)', category: 'Inventory' },
   { id: 'inventory.transfer', label: 'Inter-Warehouse Stock Transfer', category: 'Inventory' },
   { id: 'finished_goods.view', label: 'View Finished Goods Store', category: 'Inventory' },
+  { id: 'finished_goods.manage', label: 'Inward, Adjust & QA Finished Goods', category: 'Inventory' },
   
   { id: 'procurement.view', label: 'View Purchase Orders & GRNs', category: 'Procurement' },
   { id: 'procurement.po.create', label: 'Create Purchase Orders (PO)', category: 'Procurement' },
@@ -2478,6 +2479,8 @@ export const useMipsStore = create<MipsState>()((set, get) => ({
           departments: [],
           employees: [],
           plants: [],
+          categories: [],
+          wattages: [],
           selectedPlant: 'All Plants (Global View)',
           auditLogs: [],
         });

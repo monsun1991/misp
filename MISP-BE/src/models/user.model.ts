@@ -15,7 +15,8 @@ export class User extends BaseEntityModel {
   @Column({ type: "varchar", length: 255, nullable: false })
   password!: string;
 
-  @Column({ type: "varchar", length: 10, nullable: true, default: "123456" })
+  // bcrypt hash of the login PIN (never plain text)
+  @Column({ type: "varchar", length: 255, nullable: true })
   pin?: string;
 
   @Column({ type: "varchar", length: 20, nullable: true })

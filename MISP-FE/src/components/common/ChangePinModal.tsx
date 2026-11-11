@@ -8,9 +8,11 @@ import { toast } from 'react-toastify';
 interface ChangePinModalProps {
   isOpen: boolean;
   onClose: () => void;
+  // Forced change (still on the default PIN): no way to dismiss until a new PIN is saved
+  required?: boolean;
 }
 
-export const ChangePinModal: React.FC<ChangePinModalProps> = ({ isOpen, onClose }) => {
+export const ChangePinModal: React.FC<ChangePinModalProps> = ({ isOpen, onClose, required = false }) => {
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -63,17 +65,21 @@ export const ChangePinModal: React.FC<ChangePinModalProps> = ({ isOpen, onClose 
                 Change Login PIN
               </h2>
               <p className="text-[11px] text-slate-500">
-                Set a new 4 to 6-digit numeric login PIN
+                {required
+                  ? 'You are using the default PIN. Please set your own PIN to continue.'
+                  : 'Set a new 4 to 6-digit numeric login PIN'}
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-lg"
-          >
-            &times;
-          </button>
+          {!required && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 text-lg"
+            >
+              &times;
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
@@ -140,15 +146,17 @@ export const ChangePinModal: React.FC<ChangePinModalProps> = ({ isOpen, onClose 
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              disabled={changePin.isPending}
-            >
-              Cancel
-            </Button>
+            {!required && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                disabled={changePin.isPending}
+              >
+                Cancel
+              </Button>
+            )}
             <Button
               type="submit"
               size="sm"

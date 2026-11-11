@@ -212,7 +212,6 @@ export function formatUserProfile(user: User) {
     supervisor: user.supervisor || 'System Super Admin',
     status: user.status || 'Active',
     skills: user.skills ? (user.skills.includes(',') ? user.skills.split(',').map((s: string) => s.trim()) : [user.skills]) : [],
-    pin: user.pin || '123456',
     customPermissions,
     revokedPermissions,
   };

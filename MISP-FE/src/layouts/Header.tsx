@@ -43,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const { selectedPlant, setSelectedPlant, plants } = useMipsStore();
   const [isChangePinOpen, setIsChangePinOpen] = useState(false);
+  const mustChangePin = useUserStore((s: any) => s.mustChangePin);
 
   const plantOptions = [
     ...(plants || []).map((p) => ({
@@ -269,7 +270,8 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <ChangePinModal
-        isOpen={isChangePinOpen}
+        isOpen={isChangePinOpen || mustChangePin}
+        required={mustChangePin}
         onClose={() => setIsChangePinOpen(false)}
       />
     </header>

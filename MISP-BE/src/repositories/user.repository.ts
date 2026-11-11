@@ -1,7 +1,7 @@
 import { AppDataSource } from "../config/data-source";
 import { User } from "../models/user.model";
 import { NotFoundException, ConflictException } from "../utils/error.util";
-import bcrypt from "bcrypt";
+import { hashPassword, DEFAULT_PIN } from "../utils/password";
 
 const getUserRepo = () => AppDataSource.getRepository(User);
 
@@ -36,12 +36,12 @@ export const createUser = async (input: Partial<User>): Promise<User> => {
     if (existing) throw new ConflictException(`User with email ${data.email} already exists`);
   }
 
-  const hashedPassword = data.password ? await bcrypt.hash(data.password, 10) : await bcrypt.hash("123456", 10);
+  const hashedPassword = await hashPassword(data.password || data.pin || DEFAULT_PIN);
   const user = repo.create({
     ...data,
     email: data.email?.toLowerCase(),
     password: hashedPassword,
-    pin: data.pin || "123456",
+    pin: await hashPassword(data.pin || DEFAULT_PIN),
     isActive: true,
     isDeleted: false,
   });
@@ -55,7 +55,10 @@ export const updateUser = async (id: string, input: Partial<User>): Promise<User
   const user = await getUserById(id);
 
   if (data.password) {
-    data.password = await bcrypt.hash(data.password, 10);
+    data.password = await hashPassword(data.password);
+  }
+  if (data.pin) {
+    data.pin = await hashPassword(data.pin);
   }
   if (data.email) {
     data.email = data.email.toLowerCase();

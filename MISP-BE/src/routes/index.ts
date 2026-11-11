@@ -1,29 +1,17 @@
 import { Router } from "express";
 import AuthRoutes from "./auth.route";
 import DashboardRoutes from "./dashboard.route";
-import MaterialRoutes from "./material.route";
-import ProductRoutes from "./product.route";
-import ProcurementRoutes from "./procurement.route";
-import ProductionRoutes from "./production.route";
-import OrderRoutes from "./order.route";
-import AdminRoutes from "./admin.route";
-import UserRoutes from "./user.route";
 import MipsRoutes from "./mips.route";
+import { authorizeUser } from "../middlewares/auth.middleware";
+import { enforceWritePermissions } from "../middlewares/permission.middleware";
 
 const router = Router();
 
-// Modular Enterprise Domain Routes
+// Login is public; everything else requires a valid session
 router.use("/auth", AuthRoutes);
 router.use("/dashboard", DashboardRoutes);
-router.use("/materials", MaterialRoutes);
-router.use("/products", ProductRoutes);
-router.use("/procurement", ProcurementRoutes);
-router.use("/production", ProductionRoutes);
-router.use("/orders", OrderRoutes);
-router.use("/admin", AdminRoutes);
-router.use("/users", UserRoutes);
 
-// Compatibility Gateway for existing frontend services
-router.use("/mips", MipsRoutes);
+// Data API used by the frontend: signed-in users can read, writes are checked against role permissions
+router.use("/mips", authorizeUser(), enforceWritePermissions, MipsRoutes);
 
 export default router;

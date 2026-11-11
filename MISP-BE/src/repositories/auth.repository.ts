@@ -3,7 +3,7 @@ import { User } from "../models";
 import { ILogin } from "../dto/auth.dto";
 import { NotFoundException, BadRequestException } from "../utils/error.util";
 import { AUTH_ERRORS } from "../constants/error.constants";
-import { comparePasswords, hashPassword } from "../utils/password";
+import { comparePasswords, compareSecret, hashPassword, isBcryptHash, DEFAULT_PIN } from "../utils/password";
 import { generateToken, storeUserTokenInCache } from "../utils/auth.util";
 import { v4 as uuidv4 } from "uuid";
 import config from "../config/auth.config";
@@ -16,6 +16,7 @@ export const loginUser = async (
 ): Promise<{
   user: User;
   token: string;
+  mustChangePin: boolean;
 }> => {
   const rawId = (payload.identifier || payload.email || payload.username || payload.phoneNumber || payload.empCode || "").trim();
   const rawCred = (payload.pin || payload.password || "").trim();
@@ -48,12 +49,6 @@ export const loginUser = async (
     ]
   });
 
-  if (!user && (rawId.toLowerCase() === "admin@gmial.com" || rawId.toLowerCase() === "admin" || rawId === "EMP-0001" || rawId === "9876543210")) {
-    user = await userRepository.findOne({
-      where: { email: "admin@gmail.com" },
-    });
-  }
-
   if (!user) {
     throw new NotFoundException(AUTH_ERRORS.INVALID_CREDENTIALS);
   }
@@ -66,28 +61,17 @@ export const loginUser = async (
     throw new BadRequestException("This account is currently inactive.");
   }
 
-  // Validate Credential: PIN or Password
-  let isValid = false;
-  if (user.password && (await comparePasswords(rawCred, user.password))) {
-    isValid = true;
-  }
-  // Allow user's PIN or default 6-digit PINs (123456, 112233) or default passwords
-  if (
-    !isValid &&
-    (rawCred === "123456" ||
-      rawCred === "112233" ||
-      rawCred === "000000" ||
-      rawCred === "Password@123" ||
-      rawCred === "Admin@123")
-  ) {
-    isValid = true;
-  }
-  if (!isValid && (user as any).pin && (user as any).pin === rawCred) {
-    isValid = true;
+  // Validate Credential: the user's own password or PIN only
+  const passwordValid = !!rawCred && !!user.password && (await comparePasswords(rawCred, user.password));
+  const pinValid = !passwordValid && (await compareSecret(rawCred, user.pin));
+
+  if (!passwordValid && !pinValid) {
+    throw new NotFoundException(AUTH_ERRORS.INVALID_CREDENTIALS);
   }
 
-  if (!isValid) {
-    throw new NotFoundException(AUTH_ERRORS.INVALID_CREDENTIALS);
+  // Upgrade a legacy plain-text PIN to a hash now that we know it
+  if (pinValid && !isBcryptHash(user.pin)) {
+    user.pin = await hashPassword(rawCred);
   }
 
   user.lastLoginAt = new Date();
@@ -108,6 +92,8 @@ export const loginUser = async (
   return {
     user,
     token,
+    // Still signing in with the factory-default PIN: the UI forces a change
+    mustChangePin: rawCred === DEFAULT_PIN,
   };
 };
 
@@ -170,16 +156,19 @@ export const updateUserPin = async (
     throw new NotFoundException("User not found.");
   }
 
+  if (newPin === DEFAULT_PIN) {
+    throw new BadRequestException("Please choose a PIN other than the default 123456.");
+  }
+
   if (currentPin) {
-    const isPassValid = user.password && (await comparePasswords(currentPin, user.password));
-    const isPinValid = user.pin && user.pin === currentPin;
-    const isDefault = currentPin === "123456" || currentPin === "112233";
-    if (!isPassValid && !isPinValid && !isDefault) {
+    const isPassValid = !!user.password && (await comparePasswords(currentPin, user.password));
+    const isPinValid = await compareSecret(currentPin, user.pin);
+    if (!isPassValid && !isPinValid) {
       throw new BadRequestException("Current PIN is incorrect.");
     }
   }
 
-  user.pin = newPin;
+  user.pin = await hashPassword(newPin);
   user.password = await hashPassword(newPin);
   await userRepository.save(user);
 

@@ -38,9 +38,14 @@ export function App() {
 
   const accessToken = useUserStore((s: any) => s.accessToken);
 
+  // The data API requires a session: load after login (and on reload while signed in), clear on logout
   useEffect(() => {
-    initData();
-  }, [initData]);
+    if (accessToken) {
+      initData();
+    } else {
+      useMipsStore.getState().resetToDefaultData();
+    }
+  }, [initData, accessToken]);
 
   // Permissions are cached at login; re-fetch them so role changes made in Settings apply on the next page load
   useEffect(() => {
